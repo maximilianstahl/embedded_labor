@@ -54,33 +54,10 @@ volatile uint8_t btn_stat_reg = 0x00;	// register for button statuses
 volatile uint8_t lcd_stat_reg = 0x00;	// register to tell LCD what to display
 volatile uint8_t ctrl_reg = 0x00;		// register for general control exchange
 
-void timer_intr_init(void)
-{
-	/* Timer0 settings */
-	TCCR0 = (1 << CS01);	// prescaler 8
-	
-	/* Timer1 settings */
-    TCCR1A = 0x00;				// Set Timer1 to CTC mode (WGM12), 
-    TCCR1B = (1 << WGM12);
-    TCCR1B |= (1 << CS11) | (1 << CS10);	// prescaler 64 (for 1 ms interrupt)
-    /* Set the compare values for OCR1A and OCR1B */
-    OCR1A = 56;		// 3,686,400 / ?64 * 1,000 - 1 = 57,6 ~= 56
-    OCR1B = 56;		// 3,686,400 / ?64 * 1,000 - 1 = 57,6 ~= 56
-	
-	/* Timer2 settings */
-	TCCR2 = (1 << WGM21) | (1 << WGM20) | (1 << COM21) | (1 << CS21);		// enable fast pwm, with clear oc2 at compare match, prescaler 8
-	
-	TIMSK |= (1 << TOIE2) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE0);	// overflow interrupt
-	sei();													// global interrupt enable
-}
-
-void adc_init(void) 
-{
-	ADMUX |= (1 << REFS0) | (1 << ADLAR);	// AVcc as reference, left adjust -> 8 bit result
-	ADCSRA |= (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADFR);	// prescaler to 64, free running, enable adc, start conversion
-	
-	ADCSRA |= (1 << ADSC);	// start conversion
-}
+void turn_signal_processing(void);
+void turn_signal_button_debounce(void);
+void timer_intr_init(void);
+void adc_init(void);
 
 int main(void)
 {
@@ -125,35 +102,130 @@ int main(void)
 	}
 }
 
-ISR (TIMER0_OVF_vect)
+void timer_intr_init(void)
 {
-	static uint8_t steering_initiated = FALSE;	// var to tell if steering process is initiated
+	/* Timer0 settings */
+	TCCR0 = (1 << CS01);	// prescaler 8
+	
+	/* Timer1 settings */
+	TCCR1A = 0x00;				// Set Timer1 to CTC mode (WGM12),
+	TCCR1B = (1 << WGM12);
+	TCCR1B |= (1 << CS11) | (1 << CS10);	// prescaler 64 (for 1 ms interrupt)
+	/* Set the compare values for OCR1A and OCR1B */
+	OCR1A = 56;		// 3,686,400 / ?64 * 1,000 - 1 = 57,6 ~= 56
+	OCR1B = 56;		// 3,686,400 / ?64 * 1,000 - 1 = 57,6 ~= 56
+	
+	/* Timer2 settings */
+	TCCR2 = (1 << WGM21) | (1 << WGM20) | (1 << COM21) | (1 << CS21);		// enable fast pwm, with clear oc2 at compare match, prescaler 8
+	
+	TIMSK |= (1 << TOIE2) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE0);	// overflow interrupt
+	sei();													// global interrupt enable
+}
 
-	/* steering processing */
-	if (!steering_initiated) {
-		if (!(((127 - 42) < ADCH) && (ADCH < (127 + 42)))) {
-			/* steering process is initiated -> not -10° < lw < 10° */
-			steering_initiated = TRUE;
-			lcd_stat_reg &= ~(1 << STEERING);	// unset steering done
+void adc_init(void)
+{
+	ADMUX |= (1 << REFS0) | (1 << ADLAR);	// AVcc as reference, left adjust -> 8 bit result
+	ADCSRA |= (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADFR);	// prescaler to 64, free running, enable adc, start conversion
+	
+	ADCSRA |= (1 << ADSC);	// start conversion
+}
+
+void turn_signal_processing(void) 
+{
+	static TurnSigState turn_sig_state = TS_IDLE;		// initial state is always idle
+	static uint16_t ctr = 0, comf_ctr = 0, desc_ctr = 0;
+	static uint8_t go_to_cont = FALSE;
+	static uint8_t exit_cont = FALSE;
+	
+	/* turn signal state machine */
+	switch (turn_sig_state) {
+		case TS_IDLE:
+			if (btn_stat_reg & (1 << TS_BTN)) {
+				/* if button is pressed and valid, go to comfort mode */
+				turn_sig_state = TS_COMF;
+			
+				/* initially turn on LED */
+				PORTB |= (1 << PB4);
+				lcd_stat_reg |= (1 << TURN_SIG);
+			}
+			break;
+		case TS_COMF:
+			/* only allow check during the first second */
+			if ((comf_ctr < (1000 - DB_TIME_MS)) && (btn_stat_reg & (1 << TS_BTN))) {
+				desc_ctr += 1;
+			
+				/* check if button is held for 1 second minus debounce time */
+				if (desc_ctr >= (1000 - DB_TIME_MS)) {
+					go_to_cont = TRUE;
+				}
+			}
+		
+			/* 5 because initial state is on, so we just need 5 instead of 6 led toggles */
+			if (comf_ctr < 5) {
+				if (ctr > 500) {
+					comf_ctr += 1;
+					ctr = 0;
 				
-		}
-		else {
-			ctrl_reg &= ~(1 << TURN_OFF_TS);	// unset turn off turn signal
-		}
-	}
-	else {
-		if (((127 - 42) < ADCH) && (ADCH < (127 + 42))) {
-			/* steering done -> -10° < lw < 10° */
-			steering_initiated = FALSE;
-			lcd_stat_reg |= (1 << STEERING);	// set steering done
-			ctrl_reg |= (1 << TURN_OFF_TS);		// set turn off turn signal
-		}
+					PORTB ^= (1 << PB4);				// toggle led
+					lcd_stat_reg ^= (1 << TURN_SIG);	// toggle status register
+				}
+				else {
+					ctr += 1;
+				}
+			}
+			else {
+				/* check if we go to continuous or if we stop */
+				if (go_to_cont) {
+					turn_sig_state = TS_CONT;
+					go_to_cont = FALSE;
+				}
+				else {
+					turn_sig_state = TS_IDLE;
+				}
+			
+				/* comfort mode done -> reset all counters */
+				desc_ctr = 0;
+				comf_ctr = 0;
+				ctr = 0;
+			}
+			break;
+		case TS_CONT:
+			if (ctr > 500) {
+				PORTB ^= (1 << PB4);				// toggle led
+				lcd_stat_reg ^= (1 << TURN_SIG);	// toggle status register
+				ctr = 0;
+			}
+			else {
+				ctr += 1;
+			}
+		
+			/* check if either button is pressed again or steering is done*/
+			if ((btn_stat_reg & (1 << TS_BTN)) || ctrl_reg & (1 << TURN_OFF_TS)) {
+				exit_cont = TRUE;
+			}
+		
+			/* button condition is required so loop does not instantly start again */
+			if (exit_cont && !(btn_stat_reg & (1 << TS_BTN)))
+			{
+				ctrl_reg &= ~(1 << TURN_OFF_TS);	// unset turn off turn signal
+			
+				ctr = 0;
+				turn_sig_state = TS_IDLE;
+				exit_cont = FALSE;
+				/* manually turn off led */
+				PORTB &= ~(1 << PB4);
+				lcd_stat_reg &= ~(1 << TURN_SIG);
+			}
+			break;
+		default:
+			/* if we somehow land here, reset turn signal state */
+			turn_sig_state = BTN_RELEASED;
+			break;
 	}
 }
 
-ISR (TIMER1_COMPA_vect)
+void turn_signal_button_debounce(void)
 {
-	/* ISR primarily used for debouncing */
 	static ButtonState ts_btn_state = BTN_RELEASED;		// initial state is always button released
 	static uint16_t ctr = 0;
 	
@@ -209,101 +281,50 @@ ISR (TIMER1_COMPA_vect)
 			else {
 				ctr += 1;
 			}
+			break;
 		default:
+			/* if we somehow land here, reset button state */
+			ts_btn_state = BTN_RELEASED;
 			break;
 	}
 }
 
+ISR (TIMER0_OVF_vect)
+{
+	static uint8_t steering_initiated = FALSE;	// var to tell if steering process is initiated
+
+	/* steering processing */
+	if (!steering_initiated) {
+		if (!(((127 - 42) < ADCH) && (ADCH < (127 + 42)))) {
+			/* steering process is initiated -> not -10° < lw < 10° */
+			steering_initiated = TRUE;
+			lcd_stat_reg &= ~(1 << STEERING);	// unset steering done
+				
+		}
+		else {
+			ctrl_reg &= ~(1 << TURN_OFF_TS);	// unset turn off turn signal
+		}
+	}
+	else {
+		if (((127 - 42) < ADCH) && (ADCH < (127 + 42))) {
+			/* steering done -> -10° < lw < 10° */
+			steering_initiated = FALSE;
+			lcd_stat_reg |= (1 << STEERING);	// set steering done
+			ctrl_reg |= (1 << TURN_OFF_TS);		// set turn off turn signal
+		}
+	}
+}
+
+ISR (TIMER1_COMPA_vect)
+{
+	/* ISR primarily used for debouncing */
+	turn_signal_button_debounce();
+}
+
 ISR (TIMER1_COMPB_vect)
 {
-	static TurnSigState turn_sig_state = TS_IDLE;		// initial state is always idle
-	static uint16_t ctr = 0, comf_ctr = 0, desc_ctr = 0;
-	static uint8_t go_to_cont = FALSE;
-	static uint8_t exit_cont = FALSE;
-	
-	/* turn signal state machine */
-	switch (turn_sig_state) {
-		case TS_IDLE:
-			if (btn_stat_reg & (1 << TS_BTN)) {
-				/* if button is pressed and valid, go to comfort mode */
-				turn_sig_state = TS_COMF;
-				
-				/* initially turn on LED */
-				PORTB |= (1 << PB4);
-				lcd_stat_reg |= (1 << TURN_SIG);
-			}
-			break;
-		case TS_COMF:
-			/* only allow check during the first second */
-			if ((comf_ctr < (1000 - DB_TIME_MS)) && (btn_stat_reg & (1 << TS_BTN))) {
-				desc_ctr += 1;
-				
-				/* check if button is held for 1 second minus debounce time */
-				if (desc_ctr >= (1000 - DB_TIME_MS)) {
-					go_to_cont = TRUE;
-				}
-			}
-			
-			/* 5 because initial state is on, so we just need 5 instead of 6 led toggles */
-			if (comf_ctr < 5) {
-				if (ctr > 500) {
-					comf_ctr += 1;
-					ctr = 0;
-					
-					PORTB ^= (1 << PB4);				// toggle led
-					lcd_stat_reg ^= (1 << TURN_SIG);	// toggle status register
-				}
-				else {
-					ctr += 1;
-				}
-			}
-			else {
-				/* check if we go to continuous or if we stop */
-				if (go_to_cont) {
-					turn_sig_state = TS_CONT;
-					go_to_cont = FALSE;
-				}
-				else {
-					turn_sig_state = TS_IDLE;
-				}
-				
-				/* comfort mode done -> reset all counters */
-				desc_ctr = 0;
-				comf_ctr = 0;
-				ctr = 0;
-			}
-			break;
-		case TS_CONT:
-			if (ctr > 500) {
-				PORTB ^= (1 << PB4);				// toggle led
-				lcd_stat_reg ^= (1 << TURN_SIG);	// toggle status register
-				ctr = 0;
-			}
-			else {
-				ctr += 1;
-			}
-			
-			/* check if either button is pressed again or steering is done*/
-			if ((btn_stat_reg & (1 << TS_BTN)) || ctrl_reg & (1 << TURN_OFF_TS)) {
-				exit_cont = TRUE;
-			}
-			
-			/* button condition is required so loop does not instantly start again */
-			if (exit_cont && !(btn_stat_reg & (1 << TS_BTN)))
-			{
-				ctrl_reg &= ~(1 << TURN_OFF_TS);	// unset turn off turn signal
-				
-				ctr = 0;
-				turn_sig_state = TS_IDLE;
-				exit_cont = FALSE;
-				/* manually turn off led */
-				PORTB &= ~(1 << PB4);
-				lcd_stat_reg &= ~(1 << TURN_SIG);
-			}
-			break;
-		default:
-			break;
-	}
+	/* ISR primarily used for processing */
+	turn_signal_processing();
 }
 
 ISR (TIMER2_OVF_vect)
