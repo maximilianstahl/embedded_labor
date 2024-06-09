@@ -82,9 +82,6 @@ void adc_init(void)
 	ADCSRA |= (1 << ADSC);	// start conversion
 }
 
-volatile TurnSigState turn_sig_state = TS_IDLE;				// initial state is always idle
-volatile ButtonState ts_btn_state = BTN_RELEASED;		// initial state is always idle
-
 int main(void)
 {
 	uint8_t AD_val = 0;				// define var ad value
@@ -124,14 +121,6 @@ int main(void)
 		lcd_set_cursor(1, 0);				// write to the first column of the second row
 		lcd_text(lcd_str);					// put value to LCD
 		
-		int2ascii(turn_sig_state, lcd_str);	// convert int to ascii representation
-		lcd_set_cursor(1, 4);				// write to the first column of the second row
-		lcd_text(lcd_str);					// put value to lcd
-		
-		int2ascii(ts_btn_state, lcd_str);	// convert int to ascii representation
-		lcd_set_cursor(1, 8);				// write to the first column of the second row
-		lcd_text(lcd_str);					// put value to lcd
-		
 		_delay_ms(100);
 	}
 }
@@ -165,7 +154,7 @@ ISR (TIMER0_OVF_vect)
 ISR (TIMER1_COMPA_vect)
 {
 	/* ISR primarily used for debouncing */
-	//static ButtonState ts_btn_state = IDLE_BTN;		// initial state is always idle
+	static ButtonState ts_btn_state = BTN_RELEASED;		// initial state is always button released
 	static uint16_t ctr = 0;
 	
 	/* turn signal state machine */
@@ -227,7 +216,7 @@ ISR (TIMER1_COMPA_vect)
 
 ISR (TIMER1_COMPB_vect)
 {
-	// static State turn_sig_state = IDLE;		// initial state is always idle
+	static TurnSigState turn_sig_state = TS_IDLE;		// initial state is always idle
 	static uint16_t ctr = 0, comf_ctr = 0, desc_ctr = 0;
 	static uint8_t go_to_cont = FALSE;
 	static uint8_t exit_cont = FALSE;
@@ -311,7 +300,6 @@ ISR (TIMER1_COMPB_vect)
 				PORTB &= ~(1 << PB4);
 				lcd_stat_reg &= ~(1 << TURN_SIG);
 			}
-			
 			break;
 		default:
 			break;

@@ -3,31 +3,31 @@ embedded_labor.elf:     file format elf32-avr
 
 Sections:
 Idx Name          Size      VMA       LMA       File off  Algn
-  0 .text         000005be  00000000  00000000  00000094  2**1
+  0 .text         0000058e  00000000  00000000  00000094  2**1
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
-  1 .data         00000016  00800060  000005be  00000652  2**0
+  1 .data         00000016  00800060  0000058e  00000622  2**0
                   CONTENTS, ALLOC, LOAD, DATA
-  2 .bss          0000000e  00800076  00800076  00000668  2**0
+  2 .bss          0000000e  00800076  00800076  00000638  2**0
                   ALLOC
-  3 .comment      00000030  00000000  00000000  00000668  2**0
+  3 .comment      00000030  00000000  00000000  00000638  2**0
                   CONTENTS, READONLY
-  4 .note.gnu.avr.deviceinfo 0000003c  00000000  00000000  00000698  2**2
+  4 .note.gnu.avr.deviceinfo 0000003c  00000000  00000000  00000668  2**2
                   CONTENTS, READONLY
-  5 .debug_aranges 00000098  00000000  00000000  000006d4  2**0
+  5 .debug_aranges 00000098  00000000  00000000  000006a4  2**0
                   CONTENTS, READONLY, DEBUGGING
-  6 .debug_info   00000dbb  00000000  00000000  0000076c  2**0
+  6 .debug_info   00000d1b  00000000  00000000  0000073c  2**0
                   CONTENTS, READONLY, DEBUGGING
-  7 .debug_abbrev 0000077f  00000000  00000000  00001527  2**0
+  7 .debug_abbrev 0000077f  00000000  00000000  00001457  2**0
                   CONTENTS, READONLY, DEBUGGING
-  8 .debug_line   00000830  00000000  00000000  00001ca6  2**0
+  8 .debug_line   0000080d  00000000  00000000  00001bd6  2**0
                   CONTENTS, READONLY, DEBUGGING
-  9 .debug_frame  0000015c  00000000  00000000  000024d8  2**2
+  9 .debug_frame  0000015c  00000000  00000000  000023e4  2**2
                   CONTENTS, READONLY, DEBUGGING
- 10 .debug_str    000004a6  00000000  00000000  00002634  2**0
+ 10 .debug_str    000004a6  00000000  00000000  00002540  2**0
                   CONTENTS, READONLY, DEBUGGING
- 11 .debug_loc    00000515  00000000  00000000  00002ada  2**0
+ 11 .debug_loc    00000515  00000000  00000000  000029e6  2**0
                   CONTENTS, READONLY, DEBUGGING
- 12 .debug_ranges 00000078  00000000  00000000  00002fef  2**0
+ 12 .debug_ranges 00000078  00000000  00000000  00002efb  2**0
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
@@ -37,12 +37,12 @@ Disassembly of section .text:
    2:	2c c0       	rjmp	.+88     	; 0x5c <__bad_interrupt>
    4:	2b c0       	rjmp	.+86     	; 0x5c <__bad_interrupt>
    6:	2a c0       	rjmp	.+84     	; 0x5c <__bad_interrupt>
-   8:	ce c2       	rjmp	.+1436   	; 0x5a6 <__vector_4>
+   8:	b6 c2       	rjmp	.+1388   	; 0x576 <__vector_4>
    a:	28 c0       	rjmp	.+80     	; 0x5c <__bad_interrupt>
-   c:	96 c1       	rjmp	.+812    	; 0x33a <__vector_6>
-   e:	fb c1       	rjmp	.+1014   	; 0x406 <__vector_7>
+   c:	7e c1       	rjmp	.+764    	; 0x30a <__vector_6>
+   e:	e3 c1       	rjmp	.+966    	; 0x3d6 <__vector_7>
   10:	25 c0       	rjmp	.+74     	; 0x5c <__bad_interrupt>
-  12:	5c c1       	rjmp	.+696    	; 0x2cc <__vector_9>
+  12:	44 c1       	rjmp	.+648    	; 0x29c <__vector_9>
   14:	23 c0       	rjmp	.+70     	; 0x5c <__bad_interrupt>
   16:	22 c0       	rjmp	.+68     	; 0x5c <__bad_interrupt>
   18:	21 c0       	rjmp	.+66     	; 0x5c <__bad_interrupt>
@@ -65,7 +65,7 @@ Disassembly of section .text:
   32:	10 e0       	ldi	r17, 0x00	; 0
   34:	a0 e6       	ldi	r26, 0x60	; 96
   36:	b0 e0       	ldi	r27, 0x00	; 0
-  38:	ee eb       	ldi	r30, 0xBE	; 190
+  38:	ee e8       	ldi	r30, 0x8E	; 142
   3a:	f5 e0       	ldi	r31, 0x05	; 5
   3c:	02 c0       	rjmp	.+4      	; 0x42 <__SREG__+0x3>
   3e:	05 90       	lpm	r0, Z+
@@ -88,7 +88,7 @@ Disassembly of section .text:
   54:	b2 07       	cpc	r27, r18
   56:	e1 f7       	brne	.-8      	; 0x50 <.do_clear_bss_loop>
   58:	d7 d0       	rcall	.+430    	; 0x208 <main>
-  5a:	af c2       	rjmp	.+1374   	; 0x5ba <_exit>
+  5a:	97 c2       	rjmp	.+1326   	; 0x58a <_exit>
 
 0000005c <__bad_interrupt>:
   5c:	d1 cf       	rjmp	.-94     	; 0x0 <__vectors>
@@ -393,9 +393,7 @@ void adc_init(void)
  206:	08 95       	ret
 
 00000208 <main>:
-
-volatile TurnSigState turn_sig_state = TS_IDLE;				// initial state is always idle
-volatile ButtonState ts_btn_state = BTN_RELEASED;		// initial state is always idle
+}
 
 int main(void)
 {
@@ -497,531 +495,501 @@ int main(void)
  282:	ce 01       	movw	r24, r28
  284:	01 96       	adiw	r24, 0x01	; 1
  286:	0d df       	rcall	.-486    	; 0xa2 <lcd_text>
-		
-		int2ascii(turn_sig_state, lcd_str);	// convert int to ascii representation
- 288:	80 91 61 00 	lds	r24, 0x0061	; 0x800061 <turn_sig_state>
- 28c:	be 01       	movw	r22, r28
- 28e:	6f 5f       	subi	r22, 0xFF	; 255
- 290:	7f 4f       	sbci	r23, 0xFF	; 255
- 292:	e5 de       	rcall	.-566    	; 0x5e <int2ascii>
-		lcd_set_cursor(1, 4);				// write to the first column of the second row
- 294:	64 e0       	ldi	r22, 0x04	; 4
- 296:	81 e0       	ldi	r24, 0x01	; 1
- 298:	4b df       	rcall	.-362    	; 0x130 <lcd_set_cursor>
-		lcd_text(lcd_str);					// put value to lcd
- 29a:	ce 01       	movw	r24, r28
- 29c:	01 96       	adiw	r24, 0x01	; 1
- 29e:	01 df       	rcall	.-510    	; 0xa2 <lcd_text>
-		
-		int2ascii(ts_btn_state, lcd_str);	// convert int to ascii representation
- 2a0:	80 91 60 00 	lds	r24, 0x0060	; 0x800060 <__DATA_REGION_ORIGIN__>
- 2a4:	be 01       	movw	r22, r28
- 2a6:	6f 5f       	subi	r22, 0xFF	; 255
- 2a8:	7f 4f       	sbci	r23, 0xFF	; 255
- 2aa:	d9 de       	rcall	.-590    	; 0x5e <int2ascii>
-		lcd_set_cursor(1, 8);				// write to the first column of the second row
- 2ac:	68 e0       	ldi	r22, 0x08	; 8
- 2ae:	81 e0       	ldi	r24, 0x01	; 1
- 2b0:	3f df       	rcall	.-386    	; 0x130 <lcd_set_cursor>
-		lcd_text(lcd_str);					// put value to lcd
- 2b2:	ce 01       	movw	r24, r28
- 2b4:	01 96       	adiw	r24, 0x01	; 1
- 2b6:	f5 de       	rcall	.-534    	; 0xa2 <lcd_text>
- 2b8:	2f ef       	ldi	r18, 0xFF	; 255
- 2ba:	8f e1       	ldi	r24, 0x1F	; 31
- 2bc:	91 e0       	ldi	r25, 0x01	; 1
- 2be:	21 50       	subi	r18, 0x01	; 1
- 2c0:	80 40       	sbci	r24, 0x00	; 0
- 2c2:	90 40       	sbci	r25, 0x00	; 0
- 2c4:	e1 f7       	brne	.-8      	; 0x2be <main+0xb6>
- 2c6:	00 c0       	rjmp	.+0      	; 0x2c8 <main+0xc0>
- 2c8:	00 00       	nop
- 2ca:	b1 cf       	rjmp	.-158    	; 0x22e <main+0x26>
+ 288:	2f ef       	ldi	r18, 0xFF	; 255
+ 28a:	8f e1       	ldi	r24, 0x1F	; 31
+ 28c:	91 e0       	ldi	r25, 0x01	; 1
+ 28e:	21 50       	subi	r18, 0x01	; 1
+ 290:	80 40       	sbci	r24, 0x00	; 0
+ 292:	90 40       	sbci	r25, 0x00	; 0
+ 294:	e1 f7       	brne	.-8      	; 0x28e <main+0x86>
+ 296:	00 c0       	rjmp	.+0      	; 0x298 <main+0x90>
+ 298:	00 00       	nop
+ 29a:	c9 cf       	rjmp	.-110    	; 0x22e <main+0x26>
 
-000002cc <__vector_9>:
+0000029c <__vector_9>:
 		_delay_ms(100);
 	}
 }
 
 ISR (TIMER0_OVF_vect)
 {
- 2cc:	1f 92       	push	r1
- 2ce:	0f 92       	push	r0
- 2d0:	0f b6       	in	r0, 0x3f	; 63
- 2d2:	0f 92       	push	r0
- 2d4:	11 24       	eor	r1, r1
- 2d6:	8f 93       	push	r24
+ 29c:	1f 92       	push	r1
+ 29e:	0f 92       	push	r0
+ 2a0:	0f b6       	in	r0, 0x3f	; 63
+ 2a2:	0f 92       	push	r0
+ 2a4:	11 24       	eor	r1, r1
+ 2a6:	8f 93       	push	r24
 	static uint8_t steering_initiated = FALSE;	// var to tell if steering process is initiated
 
 	/* steering processing */
 	if (!steering_initiated) {
- 2d8:	80 91 80 00 	lds	r24, 0x0080	; 0x800080 <steering_initiated.1773>
- 2dc:	81 11       	cpse	r24, r1
- 2de:	15 c0       	rjmp	.+42     	; 0x30a <__vector_9+0x3e>
+ 2a8:	80 91 80 00 	lds	r24, 0x0080	; 0x800080 <steering_initiated.1771>
+ 2ac:	81 11       	cpse	r24, r1
+ 2ae:	15 c0       	rjmp	.+42     	; 0x2da <__vector_9+0x3e>
 		if (!(((127 - 42) < ADCH) && (ADCH < (127 + 42)))) {
- 2e0:	85 b1       	in	r24, 0x05	; 5
- 2e2:	86 35       	cpi	r24, 0x56	; 86
- 2e4:	18 f0       	brcs	.+6      	; 0x2ec <__vector_9+0x20>
- 2e6:	85 b1       	in	r24, 0x05	; 5
- 2e8:	89 3a       	cpi	r24, 0xA9	; 169
- 2ea:	48 f0       	brcs	.+18     	; 0x2fe <__vector_9+0x32>
+ 2b0:	85 b1       	in	r24, 0x05	; 5
+ 2b2:	86 35       	cpi	r24, 0x56	; 86
+ 2b4:	18 f0       	brcs	.+6      	; 0x2bc <__vector_9+0x20>
+ 2b6:	85 b1       	in	r24, 0x05	; 5
+ 2b8:	89 3a       	cpi	r24, 0xA9	; 169
+ 2ba:	48 f0       	brcs	.+18     	; 0x2ce <__vector_9+0x32>
 			/* steering process is initiated -> not -10° < lw < 10° */
 			steering_initiated = TRUE;
- 2ec:	81 e0       	ldi	r24, 0x01	; 1
- 2ee:	80 93 80 00 	sts	0x0080, r24	; 0x800080 <steering_initiated.1773>
+ 2bc:	81 e0       	ldi	r24, 0x01	; 1
+ 2be:	80 93 80 00 	sts	0x0080, r24	; 0x800080 <steering_initiated.1771>
 			lcd_stat_reg &= ~(1 << STEERING);	// unset steering done
- 2f2:	80 91 82 00 	lds	r24, 0x0082	; 0x800082 <lcd_stat_reg>
- 2f6:	8f 7e       	andi	r24, 0xEF	; 239
- 2f8:	80 93 82 00 	sts	0x0082, r24	; 0x800082 <lcd_stat_reg>
- 2fc:	18 c0       	rjmp	.+48     	; 0x32e <__vector_9+0x62>
+ 2c2:	80 91 82 00 	lds	r24, 0x0082	; 0x800082 <lcd_stat_reg>
+ 2c6:	8f 7e       	andi	r24, 0xEF	; 239
+ 2c8:	80 93 82 00 	sts	0x0082, r24	; 0x800082 <lcd_stat_reg>
+ 2cc:	18 c0       	rjmp	.+48     	; 0x2fe <__vector_9+0x62>
 				
 		}
 		else {
 			ctrl_reg &= ~(1 << TURN_OFF_TS);	// unset turn off turn signal
- 2fe:	80 91 81 00 	lds	r24, 0x0081	; 0x800081 <ctrl_reg>
- 302:	8b 7f       	andi	r24, 0xFB	; 251
- 304:	80 93 81 00 	sts	0x0081, r24	; 0x800081 <ctrl_reg>
- 308:	12 c0       	rjmp	.+36     	; 0x32e <__vector_9+0x62>
+ 2ce:	80 91 81 00 	lds	r24, 0x0081	; 0x800081 <ctrl_reg>
+ 2d2:	8b 7f       	andi	r24, 0xFB	; 251
+ 2d4:	80 93 81 00 	sts	0x0081, r24	; 0x800081 <ctrl_reg>
+ 2d8:	12 c0       	rjmp	.+36     	; 0x2fe <__vector_9+0x62>
 		}
 	}
 	else {
 		if (((127 - 42) < ADCH) && (ADCH < (127 + 42))) {
- 30a:	85 b1       	in	r24, 0x05	; 5
- 30c:	86 35       	cpi	r24, 0x56	; 86
- 30e:	78 f0       	brcs	.+30     	; 0x32e <__vector_9+0x62>
- 310:	85 b1       	in	r24, 0x05	; 5
- 312:	89 3a       	cpi	r24, 0xA9	; 169
- 314:	60 f4       	brcc	.+24     	; 0x32e <__vector_9+0x62>
+ 2da:	85 b1       	in	r24, 0x05	; 5
+ 2dc:	86 35       	cpi	r24, 0x56	; 86
+ 2de:	78 f0       	brcs	.+30     	; 0x2fe <__vector_9+0x62>
+ 2e0:	85 b1       	in	r24, 0x05	; 5
+ 2e2:	89 3a       	cpi	r24, 0xA9	; 169
+ 2e4:	60 f4       	brcc	.+24     	; 0x2fe <__vector_9+0x62>
 			/* steering done -> -10° < lw < 10° */
 			steering_initiated = FALSE;
- 316:	10 92 80 00 	sts	0x0080, r1	; 0x800080 <steering_initiated.1773>
+ 2e6:	10 92 80 00 	sts	0x0080, r1	; 0x800080 <steering_initiated.1771>
 			lcd_stat_reg |= (1 << STEERING);	// set steering done
- 31a:	80 91 82 00 	lds	r24, 0x0082	; 0x800082 <lcd_stat_reg>
- 31e:	80 61       	ori	r24, 0x10	; 16
- 320:	80 93 82 00 	sts	0x0082, r24	; 0x800082 <lcd_stat_reg>
+ 2ea:	80 91 82 00 	lds	r24, 0x0082	; 0x800082 <lcd_stat_reg>
+ 2ee:	80 61       	ori	r24, 0x10	; 16
+ 2f0:	80 93 82 00 	sts	0x0082, r24	; 0x800082 <lcd_stat_reg>
 			ctrl_reg |= (1 << TURN_OFF_TS);		// set turn off turn signal
- 324:	80 91 81 00 	lds	r24, 0x0081	; 0x800081 <ctrl_reg>
- 328:	84 60       	ori	r24, 0x04	; 4
- 32a:	80 93 81 00 	sts	0x0081, r24	; 0x800081 <ctrl_reg>
+ 2f4:	80 91 81 00 	lds	r24, 0x0081	; 0x800081 <ctrl_reg>
+ 2f8:	84 60       	ori	r24, 0x04	; 4
+ 2fa:	80 93 81 00 	sts	0x0081, r24	; 0x800081 <ctrl_reg>
 		}
 	}
 }
- 32e:	8f 91       	pop	r24
- 330:	0f 90       	pop	r0
- 332:	0f be       	out	0x3f, r0	; 63
- 334:	0f 90       	pop	r0
- 336:	1f 90       	pop	r1
- 338:	18 95       	reti
+ 2fe:	8f 91       	pop	r24
+ 300:	0f 90       	pop	r0
+ 302:	0f be       	out	0x3f, r0	; 63
+ 304:	0f 90       	pop	r0
+ 306:	1f 90       	pop	r1
+ 308:	18 95       	reti
 
-0000033a <__vector_6>:
+0000030a <__vector_6>:
 
 ISR (TIMER1_COMPA_vect)
 {
- 33a:	1f 92       	push	r1
- 33c:	0f 92       	push	r0
- 33e:	0f b6       	in	r0, 0x3f	; 63
- 340:	0f 92       	push	r0
- 342:	11 24       	eor	r1, r1
- 344:	8f 93       	push	r24
- 346:	9f 93       	push	r25
+ 30a:	1f 92       	push	r1
+ 30c:	0f 92       	push	r0
+ 30e:	0f b6       	in	r0, 0x3f	; 63
+ 310:	0f 92       	push	r0
+ 312:	11 24       	eor	r1, r1
+ 314:	8f 93       	push	r24
+ 316:	9f 93       	push	r25
 	/* ISR primarily used for debouncing */
-	//static ButtonState ts_btn_state = IDLE_BTN;		// initial state is always idle
+	static ButtonState ts_btn_state = BTN_RELEASED;		// initial state is always button released
 	static uint16_t ctr = 0;
 	
 	/* turn signal state machine */
 	switch (ts_btn_state) {
- 348:	80 91 60 00 	lds	r24, 0x0060	; 0x800060 <__DATA_REGION_ORIGIN__>
- 34c:	82 30       	cpi	r24, 0x02	; 2
- 34e:	79 f1       	breq	.+94     	; 0x3ae <__vector_6+0x74>
- 350:	18 f4       	brcc	.+6      	; 0x358 <__vector_6+0x1e>
- 352:	81 30       	cpi	r24, 0x01	; 1
- 354:	31 f0       	breq	.+12     	; 0x362 <__vector_6+0x28>
- 356:	50 c0       	rjmp	.+160    	; 0x3f8 <__vector_6+0xbe>
- 358:	83 30       	cpi	r24, 0x03	; 3
- 35a:	49 f0       	breq	.+18     	; 0x36e <__vector_6+0x34>
- 35c:	84 30       	cpi	r24, 0x04	; 4
- 35e:	69 f1       	breq	.+90     	; 0x3ba <__vector_6+0x80>
- 360:	4b c0       	rjmp	.+150    	; 0x3f8 <__vector_6+0xbe>
+ 318:	80 91 61 00 	lds	r24, 0x0061	; 0x800061 <ts_btn_state.1777>
+ 31c:	82 30       	cpi	r24, 0x02	; 2
+ 31e:	79 f1       	breq	.+94     	; 0x37e <__vector_6+0x74>
+ 320:	18 f4       	brcc	.+6      	; 0x328 <__vector_6+0x1e>
+ 322:	81 30       	cpi	r24, 0x01	; 1
+ 324:	31 f0       	breq	.+12     	; 0x332 <__vector_6+0x28>
+ 326:	50 c0       	rjmp	.+160    	; 0x3c8 <__vector_6+0xbe>
+ 328:	83 30       	cpi	r24, 0x03	; 3
+ 32a:	49 f0       	breq	.+18     	; 0x33e <__vector_6+0x34>
+ 32c:	84 30       	cpi	r24, 0x04	; 4
+ 32e:	69 f1       	breq	.+90     	; 0x38a <__vector_6+0x80>
+ 330:	4b c0       	rjmp	.+150    	; 0x3c8 <__vector_6+0xbe>
 		case BTN_RELEASED:
 			if (!(PINC & (1 << PC2))) {
- 362:	9a 99       	sbic	0x13, 2	; 19
- 364:	49 c0       	rjmp	.+146    	; 0x3f8 <__vector_6+0xbe>
+ 332:	9a 99       	sbic	0x13, 2	; 19
+ 334:	49 c0       	rjmp	.+146    	; 0x3c8 <__vector_6+0xbe>
 				/* if button is pressed, start debouncing */
 				ts_btn_state = BTN_PRESSED_DB;
- 366:	83 e0       	ldi	r24, 0x03	; 3
- 368:	80 93 60 00 	sts	0x0060, r24	; 0x800060 <__DATA_REGION_ORIGIN__>
- 36c:	45 c0       	rjmp	.+138    	; 0x3f8 <__vector_6+0xbe>
+ 336:	83 e0       	ldi	r24, 0x03	; 3
+ 338:	80 93 61 00 	sts	0x0061, r24	; 0x800061 <ts_btn_state.1777>
+ 33c:	45 c0       	rjmp	.+138    	; 0x3c8 <__vector_6+0xbe>
 			}
 			break;
 		case BTN_PRESSED_DB:
 			/* debouncing */
 			if (ctr > DB_TIME_MS) {
- 36e:	80 91 7e 00 	lds	r24, 0x007E	; 0x80007e <ctr.1779>
- 372:	90 91 7f 00 	lds	r25, 0x007F	; 0x80007f <ctr.1779+0x1>
- 376:	83 33       	cpi	r24, 0x33	; 51
- 378:	91 05       	cpc	r25, r1
- 37a:	98 f0       	brcs	.+38     	; 0x3a2 <__vector_6+0x68>
+ 33e:	80 91 7e 00 	lds	r24, 0x007E	; 0x80007e <ctr.1778>
+ 342:	90 91 7f 00 	lds	r25, 0x007F	; 0x80007f <ctr.1778+0x1>
+ 346:	83 33       	cpi	r24, 0x33	; 51
+ 348:	91 05       	cpc	r25, r1
+ 34a:	98 f0       	brcs	.+38     	; 0x372 <__vector_6+0x68>
 				if (!(PINC & (1 << PC2))) {
- 37c:	9a 99       	sbic	0x13, 2	; 19
- 37e:	09 c0       	rjmp	.+18     	; 0x392 <__vector_6+0x58>
+ 34c:	9a 99       	sbic	0x13, 2	; 19
+ 34e:	09 c0       	rjmp	.+18     	; 0x362 <__vector_6+0x58>
 					/* debounce successful -> set button state and go to pressed state*/
 					btn_stat_reg |= (1 << TS_BTN);
- 380:	80 91 83 00 	lds	r24, 0x0083	; 0x800083 <btn_stat_reg>
- 384:	82 60       	ori	r24, 0x02	; 2
- 386:	80 93 83 00 	sts	0x0083, r24	; 0x800083 <btn_stat_reg>
+ 350:	80 91 83 00 	lds	r24, 0x0083	; 0x800083 <btn_stat_reg>
+ 354:	82 60       	ori	r24, 0x02	; 2
+ 356:	80 93 83 00 	sts	0x0083, r24	; 0x800083 <btn_stat_reg>
 					ts_btn_state = BTN_PRESSED;
- 38a:	82 e0       	ldi	r24, 0x02	; 2
- 38c:	80 93 60 00 	sts	0x0060, r24	; 0x800060 <__DATA_REGION_ORIGIN__>
- 390:	03 c0       	rjmp	.+6      	; 0x398 <__vector_6+0x5e>
+ 35a:	82 e0       	ldi	r24, 0x02	; 2
+ 35c:	80 93 61 00 	sts	0x0061, r24	; 0x800061 <ts_btn_state.1777>
+ 360:	03 c0       	rjmp	.+6      	; 0x368 <__vector_6+0x5e>
 				}
 				else {
 					/* debounce unsuccessful -> back to not pressed */
 					ts_btn_state = BTN_RELEASED;
- 392:	81 e0       	ldi	r24, 0x01	; 1
- 394:	80 93 60 00 	sts	0x0060, r24	; 0x800060 <__DATA_REGION_ORIGIN__>
+ 362:	81 e0       	ldi	r24, 0x01	; 1
+ 364:	80 93 61 00 	sts	0x0061, r24	; 0x800061 <ts_btn_state.1777>
 				}
 				/* reset db counter */
 				ctr = 0;
- 398:	10 92 7f 00 	sts	0x007F, r1	; 0x80007f <ctr.1779+0x1>
- 39c:	10 92 7e 00 	sts	0x007E, r1	; 0x80007e <ctr.1779>
- 3a0:	2b c0       	rjmp	.+86     	; 0x3f8 <__vector_6+0xbe>
+ 368:	10 92 7f 00 	sts	0x007F, r1	; 0x80007f <ctr.1778+0x1>
+ 36c:	10 92 7e 00 	sts	0x007E, r1	; 0x80007e <ctr.1778>
+ 370:	2b c0       	rjmp	.+86     	; 0x3c8 <__vector_6+0xbe>
 			}
 			else {
 				ctr += 1;
- 3a2:	01 96       	adiw	r24, 0x01	; 1
- 3a4:	90 93 7f 00 	sts	0x007F, r25	; 0x80007f <ctr.1779+0x1>
- 3a8:	80 93 7e 00 	sts	0x007E, r24	; 0x80007e <ctr.1779>
- 3ac:	25 c0       	rjmp	.+74     	; 0x3f8 <__vector_6+0xbe>
+ 372:	01 96       	adiw	r24, 0x01	; 1
+ 374:	90 93 7f 00 	sts	0x007F, r25	; 0x80007f <ctr.1778+0x1>
+ 378:	80 93 7e 00 	sts	0x007E, r24	; 0x80007e <ctr.1778>
+ 37c:	25 c0       	rjmp	.+74     	; 0x3c8 <__vector_6+0xbe>
 			}
 			break;
 		case BTN_PRESSED:
 			/* check if button is released*/
 			if (PINC & (1 << PC2)) {
- 3ae:	9a 9b       	sbis	0x13, 2	; 19
- 3b0:	23 c0       	rjmp	.+70     	; 0x3f8 <__vector_6+0xbe>
+ 37e:	9a 9b       	sbis	0x13, 2	; 19
+ 380:	23 c0       	rjmp	.+70     	; 0x3c8 <__vector_6+0xbe>
 				/* if so, reset button state and go to released */
 				ts_btn_state = BTN_RELEASED_DB;
- 3b2:	84 e0       	ldi	r24, 0x04	; 4
- 3b4:	80 93 60 00 	sts	0x0060, r24	; 0x800060 <__DATA_REGION_ORIGIN__>
- 3b8:	1f c0       	rjmp	.+62     	; 0x3f8 <__vector_6+0xbe>
+ 382:	84 e0       	ldi	r24, 0x04	; 4
+ 384:	80 93 61 00 	sts	0x0061, r24	; 0x800061 <ts_btn_state.1777>
+ 388:	1f c0       	rjmp	.+62     	; 0x3c8 <__vector_6+0xbe>
 			}
 			break;
 		case BTN_RELEASED_DB:
 			/* button release debounce (prevents strange behavior)*/
 			if (ctr > DB_TIME_MS) {
- 3ba:	80 91 7e 00 	lds	r24, 0x007E	; 0x80007e <ctr.1779>
- 3be:	90 91 7f 00 	lds	r25, 0x007F	; 0x80007f <ctr.1779+0x1>
- 3c2:	83 33       	cpi	r24, 0x33	; 51
- 3c4:	91 05       	cpc	r25, r1
- 3c6:	98 f0       	brcs	.+38     	; 0x3ee <__vector_6+0xb4>
+ 38a:	80 91 7e 00 	lds	r24, 0x007E	; 0x80007e <ctr.1778>
+ 38e:	90 91 7f 00 	lds	r25, 0x007F	; 0x80007f <ctr.1778+0x1>
+ 392:	83 33       	cpi	r24, 0x33	; 51
+ 394:	91 05       	cpc	r25, r1
+ 396:	98 f0       	brcs	.+38     	; 0x3be <__vector_6+0xb4>
 				if (PINC & (1 << PC2)) {
- 3c8:	9a 9b       	sbis	0x13, 2	; 19
- 3ca:	09 c0       	rjmp	.+18     	; 0x3de <__vector_6+0xa4>
+ 398:	9a 9b       	sbis	0x13, 2	; 19
+ 39a:	09 c0       	rjmp	.+18     	; 0x3ae <__vector_6+0xa4>
 					/* debounce successful -> set button state and go to pressed state*/
 					btn_stat_reg &= ~(1 << TS_BTN);
- 3cc:	80 91 83 00 	lds	r24, 0x0083	; 0x800083 <btn_stat_reg>
- 3d0:	8d 7f       	andi	r24, 0xFD	; 253
- 3d2:	80 93 83 00 	sts	0x0083, r24	; 0x800083 <btn_stat_reg>
+ 39c:	80 91 83 00 	lds	r24, 0x0083	; 0x800083 <btn_stat_reg>
+ 3a0:	8d 7f       	andi	r24, 0xFD	; 253
+ 3a2:	80 93 83 00 	sts	0x0083, r24	; 0x800083 <btn_stat_reg>
 					ts_btn_state = BTN_RELEASED;
- 3d6:	81 e0       	ldi	r24, 0x01	; 1
- 3d8:	80 93 60 00 	sts	0x0060, r24	; 0x800060 <__DATA_REGION_ORIGIN__>
- 3dc:	03 c0       	rjmp	.+6      	; 0x3e4 <__vector_6+0xaa>
+ 3a6:	81 e0       	ldi	r24, 0x01	; 1
+ 3a8:	80 93 61 00 	sts	0x0061, r24	; 0x800061 <ts_btn_state.1777>
+ 3ac:	03 c0       	rjmp	.+6      	; 0x3b4 <__vector_6+0xaa>
 				}
 				else {
 					/* debounce unsuccessful -> back to pressed */
 					ts_btn_state = BTN_PRESSED;
- 3de:	82 e0       	ldi	r24, 0x02	; 2
- 3e0:	80 93 60 00 	sts	0x0060, r24	; 0x800060 <__DATA_REGION_ORIGIN__>
+ 3ae:	82 e0       	ldi	r24, 0x02	; 2
+ 3b0:	80 93 61 00 	sts	0x0061, r24	; 0x800061 <ts_btn_state.1777>
 				}
 				/* reset db counter */
 				ctr = 0;
- 3e4:	10 92 7f 00 	sts	0x007F, r1	; 0x80007f <ctr.1779+0x1>
- 3e8:	10 92 7e 00 	sts	0x007E, r1	; 0x80007e <ctr.1779>
- 3ec:	05 c0       	rjmp	.+10     	; 0x3f8 <__vector_6+0xbe>
+ 3b4:	10 92 7f 00 	sts	0x007F, r1	; 0x80007f <ctr.1778+0x1>
+ 3b8:	10 92 7e 00 	sts	0x007E, r1	; 0x80007e <ctr.1778>
+ 3bc:	05 c0       	rjmp	.+10     	; 0x3c8 <__vector_6+0xbe>
 			}
 			else {
 				ctr += 1;
- 3ee:	01 96       	adiw	r24, 0x01	; 1
- 3f0:	90 93 7f 00 	sts	0x007F, r25	; 0x80007f <ctr.1779+0x1>
- 3f4:	80 93 7e 00 	sts	0x007E, r24	; 0x80007e <ctr.1779>
+ 3be:	01 96       	adiw	r24, 0x01	; 1
+ 3c0:	90 93 7f 00 	sts	0x007F, r25	; 0x80007f <ctr.1778+0x1>
+ 3c4:	80 93 7e 00 	sts	0x007E, r24	; 0x80007e <ctr.1778>
 			}
 		default:
 			break;
 	}
 }
- 3f8:	9f 91       	pop	r25
- 3fa:	8f 91       	pop	r24
- 3fc:	0f 90       	pop	r0
- 3fe:	0f be       	out	0x3f, r0	; 63
- 400:	0f 90       	pop	r0
- 402:	1f 90       	pop	r1
- 404:	18 95       	reti
+ 3c8:	9f 91       	pop	r25
+ 3ca:	8f 91       	pop	r24
+ 3cc:	0f 90       	pop	r0
+ 3ce:	0f be       	out	0x3f, r0	; 63
+ 3d0:	0f 90       	pop	r0
+ 3d2:	1f 90       	pop	r1
+ 3d4:	18 95       	reti
 
-00000406 <__vector_7>:
+000003d6 <__vector_7>:
 
 ISR (TIMER1_COMPB_vect)
 {
- 406:	1f 92       	push	r1
- 408:	0f 92       	push	r0
- 40a:	0f b6       	in	r0, 0x3f	; 63
- 40c:	0f 92       	push	r0
- 40e:	11 24       	eor	r1, r1
- 410:	2f 93       	push	r18
- 412:	3f 93       	push	r19
- 414:	4f 93       	push	r20
- 416:	8f 93       	push	r24
- 418:	9f 93       	push	r25
+ 3d6:	1f 92       	push	r1
+ 3d8:	0f 92       	push	r0
+ 3da:	0f b6       	in	r0, 0x3f	; 63
+ 3dc:	0f 92       	push	r0
+ 3de:	11 24       	eor	r1, r1
+ 3e0:	2f 93       	push	r18
+ 3e2:	3f 93       	push	r19
+ 3e4:	4f 93       	push	r20
+ 3e6:	8f 93       	push	r24
+ 3e8:	9f 93       	push	r25
 	static uint16_t ctr = 0, comf_ctr = 0, desc_ctr = 0;
 	static uint8_t go_to_cont = FALSE;
 	static uint8_t exit_cont = FALSE;
 	
 	/* turn signal state machine */
 	switch (turn_sig_state) {
- 41a:	80 91 61 00 	lds	r24, 0x0061	; 0x800061 <turn_sig_state>
- 41e:	82 30       	cpi	r24, 0x02	; 2
- 420:	a1 f0       	breq	.+40     	; 0x44a <__vector_7+0x44>
- 422:	83 30       	cpi	r24, 0x03	; 3
- 424:	09 f4       	brne	.+2      	; 0x428 <__vector_7+0x22>
- 426:	71 c0       	rjmp	.+226    	; 0x50a <__stack+0xab>
- 428:	81 30       	cpi	r24, 0x01	; 1
- 42a:	09 f0       	breq	.+2      	; 0x42e <__vector_7+0x28>
- 42c:	b2 c0       	rjmp	.+356    	; 0x592 <__stack+0x133>
+ 3ea:	80 91 60 00 	lds	r24, 0x0060	; 0x800060 <__DATA_REGION_ORIGIN__>
+ 3ee:	82 30       	cpi	r24, 0x02	; 2
+ 3f0:	a1 f0       	breq	.+40     	; 0x41a <__LOCK_REGION_LENGTH__+0x1a>
+ 3f2:	83 30       	cpi	r24, 0x03	; 3
+ 3f4:	09 f4       	brne	.+2      	; 0x3f8 <__vector_7+0x22>
+ 3f6:	71 c0       	rjmp	.+226    	; 0x4da <__stack+0x7b>
+ 3f8:	81 30       	cpi	r24, 0x01	; 1
+ 3fa:	09 f0       	breq	.+2      	; 0x3fe <__vector_7+0x28>
+ 3fc:	b2 c0       	rjmp	.+356    	; 0x562 <__stack+0x103>
 		case TS_IDLE:
 			if (btn_stat_reg & (1 << TS_BTN)) {
- 42e:	80 91 83 00 	lds	r24, 0x0083	; 0x800083 <btn_stat_reg>
- 432:	81 ff       	sbrs	r24, 1
- 434:	ae c0       	rjmp	.+348    	; 0x592 <__stack+0x133>
+ 3fe:	80 91 83 00 	lds	r24, 0x0083	; 0x800083 <btn_stat_reg>
+ 402:	81 ff       	sbrs	r24, 1
+ 404:	ae c0       	rjmp	.+348    	; 0x562 <__stack+0x103>
 				/* if button is pressed and valid, go to comfort mode */
 				turn_sig_state = TS_COMF;
- 436:	82 e0       	ldi	r24, 0x02	; 2
- 438:	80 93 61 00 	sts	0x0061, r24	; 0x800061 <turn_sig_state>
+ 406:	82 e0       	ldi	r24, 0x02	; 2
+ 408:	80 93 60 00 	sts	0x0060, r24	; 0x800060 <__DATA_REGION_ORIGIN__>
 				
 				/* initially turn on LED */
 				PORTB |= (1 << PB4);
- 43c:	c4 9a       	sbi	0x18, 4	; 24
+ 40c:	c4 9a       	sbi	0x18, 4	; 24
 				lcd_stat_reg |= (1 << TURN_SIG);
- 43e:	80 91 82 00 	lds	r24, 0x0082	; 0x800082 <lcd_stat_reg>
- 442:	82 60       	ori	r24, 0x02	; 2
- 444:	80 93 82 00 	sts	0x0082, r24	; 0x800082 <lcd_stat_reg>
- 448:	a4 c0       	rjmp	.+328    	; 0x592 <__stack+0x133>
+ 40e:	80 91 82 00 	lds	r24, 0x0082	; 0x800082 <lcd_stat_reg>
+ 412:	82 60       	ori	r24, 0x02	; 2
+ 414:	80 93 82 00 	sts	0x0082, r24	; 0x800082 <lcd_stat_reg>
+ 418:	a4 c0       	rjmp	.+328    	; 0x562 <__stack+0x103>
 			}
 			break;
 		case TS_COMF:
 			/* only allow check during the first second */
 			if ((comf_ctr < (1000 - DB_TIME_MS)) && (btn_stat_reg & (1 << TS_BTN))) {
- 44a:	80 91 7c 00 	lds	r24, 0x007C	; 0x80007c <comf_ctr.1792>
- 44e:	90 91 7d 00 	lds	r25, 0x007D	; 0x80007d <comf_ctr.1792+0x1>
- 452:	86 3b       	cpi	r24, 0xB6	; 182
- 454:	23 e0       	ldi	r18, 0x03	; 3
- 456:	92 07       	cpc	r25, r18
- 458:	c0 f4       	brcc	.+48     	; 0x48a <__stack+0x2b>
- 45a:	20 91 83 00 	lds	r18, 0x0083	; 0x800083 <btn_stat_reg>
- 45e:	21 ff       	sbrs	r18, 1
- 460:	14 c0       	rjmp	.+40     	; 0x48a <__stack+0x2b>
+ 41a:	80 91 7c 00 	lds	r24, 0x007C	; 0x80007c <comf_ctr.1792>
+ 41e:	90 91 7d 00 	lds	r25, 0x007D	; 0x80007d <comf_ctr.1792+0x1>
+ 422:	86 3b       	cpi	r24, 0xB6	; 182
+ 424:	23 e0       	ldi	r18, 0x03	; 3
+ 426:	92 07       	cpc	r25, r18
+ 428:	c0 f4       	brcc	.+48     	; 0x45a <__LOCK_REGION_LENGTH__+0x5a>
+ 42a:	20 91 83 00 	lds	r18, 0x0083	; 0x800083 <btn_stat_reg>
+ 42e:	21 ff       	sbrs	r18, 1
+ 430:	14 c0       	rjmp	.+40     	; 0x45a <__LOCK_REGION_LENGTH__+0x5a>
 				desc_ctr += 1;
- 462:	20 91 7a 00 	lds	r18, 0x007A	; 0x80007a <desc_ctr.1793>
- 466:	30 91 7b 00 	lds	r19, 0x007B	; 0x80007b <desc_ctr.1793+0x1>
- 46a:	2f 5f       	subi	r18, 0xFF	; 255
- 46c:	3f 4f       	sbci	r19, 0xFF	; 255
- 46e:	30 93 7b 00 	sts	0x007B, r19	; 0x80007b <desc_ctr.1793+0x1>
- 472:	20 93 7a 00 	sts	0x007A, r18	; 0x80007a <desc_ctr.1793>
+ 432:	20 91 7a 00 	lds	r18, 0x007A	; 0x80007a <desc_ctr.1793>
+ 436:	30 91 7b 00 	lds	r19, 0x007B	; 0x80007b <desc_ctr.1793+0x1>
+ 43a:	2f 5f       	subi	r18, 0xFF	; 255
+ 43c:	3f 4f       	sbci	r19, 0xFF	; 255
+ 43e:	30 93 7b 00 	sts	0x007B, r19	; 0x80007b <desc_ctr.1793+0x1>
+ 442:	20 93 7a 00 	sts	0x007A, r18	; 0x80007a <desc_ctr.1793>
 				
 				/* check if button is held for 1 second minus debounce time */
 				if (desc_ctr >= (1000 - DB_TIME_MS)) {
- 476:	26 3b       	cpi	r18, 0xB6	; 182
- 478:	33 40       	sbci	r19, 0x03	; 3
- 47a:	38 f0       	brcs	.+14     	; 0x48a <__stack+0x2b>
+ 446:	26 3b       	cpi	r18, 0xB6	; 182
+ 448:	33 40       	sbci	r19, 0x03	; 3
+ 44a:	38 f0       	brcs	.+14     	; 0x45a <__LOCK_REGION_LENGTH__+0x5a>
 					go_to_cont = TRUE;
- 47c:	21 e0       	ldi	r18, 0x01	; 1
- 47e:	20 93 79 00 	sts	0x0079, r18	; 0x800079 <go_to_cont.1794>
+ 44c:	21 e0       	ldi	r18, 0x01	; 1
+ 44e:	20 93 79 00 	sts	0x0079, r18	; 0x800079 <go_to_cont.1794>
 				}
 			}
 			
 			/* 5 because initial state is on, so we just need 5 instead of 6 led toggles */
 			if (comf_ctr < 5) {
- 482:	85 30       	cpi	r24, 0x05	; 5
- 484:	91 05       	cpc	r25, r1
- 486:	20 f0       	brcs	.+8      	; 0x490 <__stack+0x31>
- 488:	2a c0       	rjmp	.+84     	; 0x4de <__stack+0x7f>
- 48a:	85 30       	cpi	r24, 0x05	; 5
- 48c:	91 05       	cpc	r25, r1
- 48e:	18 f5       	brcc	.+70     	; 0x4d6 <__stack+0x77>
+ 452:	85 30       	cpi	r24, 0x05	; 5
+ 454:	91 05       	cpc	r25, r1
+ 456:	20 f0       	brcs	.+8      	; 0x460 <__stack+0x1>
+ 458:	2a c0       	rjmp	.+84     	; 0x4ae <__stack+0x4f>
+ 45a:	85 30       	cpi	r24, 0x05	; 5
+ 45c:	91 05       	cpc	r25, r1
+ 45e:	18 f5       	brcc	.+70     	; 0x4a6 <__stack+0x47>
 				if (ctr > 500) {
- 490:	20 91 77 00 	lds	r18, 0x0077	; 0x800077 <ctr.1791>
- 494:	30 91 78 00 	lds	r19, 0x0078	; 0x800078 <ctr.1791+0x1>
- 498:	25 3f       	cpi	r18, 0xF5	; 245
- 49a:	41 e0       	ldi	r20, 0x01	; 1
- 49c:	34 07       	cpc	r19, r20
- 49e:	a0 f0       	brcs	.+40     	; 0x4c8 <__stack+0x69>
+ 460:	20 91 77 00 	lds	r18, 0x0077	; 0x800077 <ctr.1791>
+ 464:	30 91 78 00 	lds	r19, 0x0078	; 0x800078 <ctr.1791+0x1>
+ 468:	25 3f       	cpi	r18, 0xF5	; 245
+ 46a:	41 e0       	ldi	r20, 0x01	; 1
+ 46c:	34 07       	cpc	r19, r20
+ 46e:	a0 f0       	brcs	.+40     	; 0x498 <__stack+0x39>
 					comf_ctr += 1;
- 4a0:	01 96       	adiw	r24, 0x01	; 1
- 4a2:	90 93 7d 00 	sts	0x007D, r25	; 0x80007d <comf_ctr.1792+0x1>
- 4a6:	80 93 7c 00 	sts	0x007C, r24	; 0x80007c <comf_ctr.1792>
+ 470:	01 96       	adiw	r24, 0x01	; 1
+ 472:	90 93 7d 00 	sts	0x007D, r25	; 0x80007d <comf_ctr.1792+0x1>
+ 476:	80 93 7c 00 	sts	0x007C, r24	; 0x80007c <comf_ctr.1792>
 					ctr = 0;
- 4aa:	10 92 78 00 	sts	0x0078, r1	; 0x800078 <ctr.1791+0x1>
- 4ae:	10 92 77 00 	sts	0x0077, r1	; 0x800077 <ctr.1791>
+ 47a:	10 92 78 00 	sts	0x0078, r1	; 0x800078 <ctr.1791+0x1>
+ 47e:	10 92 77 00 	sts	0x0077, r1	; 0x800077 <ctr.1791>
 					
 					PORTB ^= (1 << PB4);				// toggle led
- 4b2:	98 b3       	in	r25, 0x18	; 24
- 4b4:	80 e1       	ldi	r24, 0x10	; 16
- 4b6:	89 27       	eor	r24, r25
- 4b8:	88 bb       	out	0x18, r24	; 24
+ 482:	98 b3       	in	r25, 0x18	; 24
+ 484:	80 e1       	ldi	r24, 0x10	; 16
+ 486:	89 27       	eor	r24, r25
+ 488:	88 bb       	out	0x18, r24	; 24
 					lcd_stat_reg ^= (1 << TURN_SIG);	// toggle status register
- 4ba:	90 91 82 00 	lds	r25, 0x0082	; 0x800082 <lcd_stat_reg>
- 4be:	82 e0       	ldi	r24, 0x02	; 2
- 4c0:	89 27       	eor	r24, r25
- 4c2:	80 93 82 00 	sts	0x0082, r24	; 0x800082 <lcd_stat_reg>
- 4c6:	65 c0       	rjmp	.+202    	; 0x592 <__stack+0x133>
+ 48a:	90 91 82 00 	lds	r25, 0x0082	; 0x800082 <lcd_stat_reg>
+ 48e:	82 e0       	ldi	r24, 0x02	; 2
+ 490:	89 27       	eor	r24, r25
+ 492:	80 93 82 00 	sts	0x0082, r24	; 0x800082 <lcd_stat_reg>
+ 496:	65 c0       	rjmp	.+202    	; 0x562 <__stack+0x103>
 				}
 				else {
 					ctr += 1;
- 4c8:	2f 5f       	subi	r18, 0xFF	; 255
- 4ca:	3f 4f       	sbci	r19, 0xFF	; 255
- 4cc:	30 93 78 00 	sts	0x0078, r19	; 0x800078 <ctr.1791+0x1>
- 4d0:	20 93 77 00 	sts	0x0077, r18	; 0x800077 <ctr.1791>
- 4d4:	5e c0       	rjmp	.+188    	; 0x592 <__stack+0x133>
+ 498:	2f 5f       	subi	r18, 0xFF	; 255
+ 49a:	3f 4f       	sbci	r19, 0xFF	; 255
+ 49c:	30 93 78 00 	sts	0x0078, r19	; 0x800078 <ctr.1791+0x1>
+ 4a0:	20 93 77 00 	sts	0x0077, r18	; 0x800077 <ctr.1791>
+ 4a4:	5e c0       	rjmp	.+188    	; 0x562 <__stack+0x103>
 				}
 			}
 			else {
 				/* check if we go to continuous or if we stop */
 				if (go_to_cont) {
- 4d6:	80 91 79 00 	lds	r24, 0x0079	; 0x800079 <go_to_cont.1794>
- 4da:	88 23       	and	r24, r24
- 4dc:	31 f0       	breq	.+12     	; 0x4ea <__stack+0x8b>
+ 4a6:	80 91 79 00 	lds	r24, 0x0079	; 0x800079 <go_to_cont.1794>
+ 4aa:	88 23       	and	r24, r24
+ 4ac:	31 f0       	breq	.+12     	; 0x4ba <__stack+0x5b>
 					turn_sig_state = TS_CONT;
- 4de:	83 e0       	ldi	r24, 0x03	; 3
- 4e0:	80 93 61 00 	sts	0x0061, r24	; 0x800061 <turn_sig_state>
+ 4ae:	83 e0       	ldi	r24, 0x03	; 3
+ 4b0:	80 93 60 00 	sts	0x0060, r24	; 0x800060 <__DATA_REGION_ORIGIN__>
 					go_to_cont = FALSE;
- 4e4:	10 92 79 00 	sts	0x0079, r1	; 0x800079 <go_to_cont.1794>
- 4e8:	03 c0       	rjmp	.+6      	; 0x4f0 <__stack+0x91>
+ 4b4:	10 92 79 00 	sts	0x0079, r1	; 0x800079 <go_to_cont.1794>
+ 4b8:	03 c0       	rjmp	.+6      	; 0x4c0 <__stack+0x61>
 				}
 				else {
 					turn_sig_state = TS_IDLE;
- 4ea:	81 e0       	ldi	r24, 0x01	; 1
- 4ec:	80 93 61 00 	sts	0x0061, r24	; 0x800061 <turn_sig_state>
+ 4ba:	81 e0       	ldi	r24, 0x01	; 1
+ 4bc:	80 93 60 00 	sts	0x0060, r24	; 0x800060 <__DATA_REGION_ORIGIN__>
 				}
 				
 				/* comfort mode done -> reset all counters */
 				desc_ctr = 0;
- 4f0:	10 92 7b 00 	sts	0x007B, r1	; 0x80007b <desc_ctr.1793+0x1>
- 4f4:	10 92 7a 00 	sts	0x007A, r1	; 0x80007a <desc_ctr.1793>
+ 4c0:	10 92 7b 00 	sts	0x007B, r1	; 0x80007b <desc_ctr.1793+0x1>
+ 4c4:	10 92 7a 00 	sts	0x007A, r1	; 0x80007a <desc_ctr.1793>
 				comf_ctr = 0;
- 4f8:	10 92 7d 00 	sts	0x007D, r1	; 0x80007d <comf_ctr.1792+0x1>
- 4fc:	10 92 7c 00 	sts	0x007C, r1	; 0x80007c <comf_ctr.1792>
+ 4c8:	10 92 7d 00 	sts	0x007D, r1	; 0x80007d <comf_ctr.1792+0x1>
+ 4cc:	10 92 7c 00 	sts	0x007C, r1	; 0x80007c <comf_ctr.1792>
 				ctr = 0;
- 500:	10 92 78 00 	sts	0x0078, r1	; 0x800078 <ctr.1791+0x1>
- 504:	10 92 77 00 	sts	0x0077, r1	; 0x800077 <ctr.1791>
- 508:	44 c0       	rjmp	.+136    	; 0x592 <__stack+0x133>
+ 4d0:	10 92 78 00 	sts	0x0078, r1	; 0x800078 <ctr.1791+0x1>
+ 4d4:	10 92 77 00 	sts	0x0077, r1	; 0x800077 <ctr.1791>
+ 4d8:	44 c0       	rjmp	.+136    	; 0x562 <__stack+0x103>
 			}
 			break;
 		case TS_CONT:
 			if (ctr > 500) {
- 50a:	80 91 77 00 	lds	r24, 0x0077	; 0x800077 <ctr.1791>
- 50e:	90 91 78 00 	lds	r25, 0x0078	; 0x800078 <ctr.1791+0x1>
- 512:	85 3f       	cpi	r24, 0xF5	; 245
- 514:	21 e0       	ldi	r18, 0x01	; 1
- 516:	92 07       	cpc	r25, r18
- 518:	78 f0       	brcs	.+30     	; 0x538 <__stack+0xd9>
+ 4da:	80 91 77 00 	lds	r24, 0x0077	; 0x800077 <ctr.1791>
+ 4de:	90 91 78 00 	lds	r25, 0x0078	; 0x800078 <ctr.1791+0x1>
+ 4e2:	85 3f       	cpi	r24, 0xF5	; 245
+ 4e4:	21 e0       	ldi	r18, 0x01	; 1
+ 4e6:	92 07       	cpc	r25, r18
+ 4e8:	78 f0       	brcs	.+30     	; 0x508 <__stack+0xa9>
 				PORTB ^= (1 << PB4);				// toggle led
- 51a:	98 b3       	in	r25, 0x18	; 24
- 51c:	80 e1       	ldi	r24, 0x10	; 16
- 51e:	89 27       	eor	r24, r25
- 520:	88 bb       	out	0x18, r24	; 24
+ 4ea:	98 b3       	in	r25, 0x18	; 24
+ 4ec:	80 e1       	ldi	r24, 0x10	; 16
+ 4ee:	89 27       	eor	r24, r25
+ 4f0:	88 bb       	out	0x18, r24	; 24
 				lcd_stat_reg ^= (1 << TURN_SIG);	// toggle status register
- 522:	90 91 82 00 	lds	r25, 0x0082	; 0x800082 <lcd_stat_reg>
- 526:	82 e0       	ldi	r24, 0x02	; 2
- 528:	89 27       	eor	r24, r25
- 52a:	80 93 82 00 	sts	0x0082, r24	; 0x800082 <lcd_stat_reg>
+ 4f2:	90 91 82 00 	lds	r25, 0x0082	; 0x800082 <lcd_stat_reg>
+ 4f6:	82 e0       	ldi	r24, 0x02	; 2
+ 4f8:	89 27       	eor	r24, r25
+ 4fa:	80 93 82 00 	sts	0x0082, r24	; 0x800082 <lcd_stat_reg>
 				ctr = 0;
- 52e:	10 92 78 00 	sts	0x0078, r1	; 0x800078 <ctr.1791+0x1>
- 532:	10 92 77 00 	sts	0x0077, r1	; 0x800077 <ctr.1791>
- 536:	05 c0       	rjmp	.+10     	; 0x542 <__stack+0xe3>
+ 4fe:	10 92 78 00 	sts	0x0078, r1	; 0x800078 <ctr.1791+0x1>
+ 502:	10 92 77 00 	sts	0x0077, r1	; 0x800077 <ctr.1791>
+ 506:	05 c0       	rjmp	.+10     	; 0x512 <__stack+0xb3>
 			}
 			else {
 				ctr += 1;
- 538:	01 96       	adiw	r24, 0x01	; 1
- 53a:	90 93 78 00 	sts	0x0078, r25	; 0x800078 <ctr.1791+0x1>
- 53e:	80 93 77 00 	sts	0x0077, r24	; 0x800077 <ctr.1791>
+ 508:	01 96       	adiw	r24, 0x01	; 1
+ 50a:	90 93 78 00 	sts	0x0078, r25	; 0x800078 <ctr.1791+0x1>
+ 50e:	80 93 77 00 	sts	0x0077, r24	; 0x800077 <ctr.1791>
 			}
 			
 			/* check if either button is pressed again or steering is done*/
 			if ((btn_stat_reg & (1 << TS_BTN)) || ctrl_reg & (1 << TURN_OFF_TS)) {
- 542:	80 91 83 00 	lds	r24, 0x0083	; 0x800083 <btn_stat_reg>
- 546:	81 fd       	sbrc	r24, 1
- 548:	04 c0       	rjmp	.+8      	; 0x552 <__stack+0xf3>
- 54a:	80 91 81 00 	lds	r24, 0x0081	; 0x800081 <ctrl_reg>
- 54e:	82 ff       	sbrs	r24, 2
- 550:	04 c0       	rjmp	.+8      	; 0x55a <__stack+0xfb>
+ 512:	80 91 83 00 	lds	r24, 0x0083	; 0x800083 <btn_stat_reg>
+ 516:	81 fd       	sbrc	r24, 1
+ 518:	04 c0       	rjmp	.+8      	; 0x522 <__stack+0xc3>
+ 51a:	80 91 81 00 	lds	r24, 0x0081	; 0x800081 <ctrl_reg>
+ 51e:	82 ff       	sbrs	r24, 2
+ 520:	04 c0       	rjmp	.+8      	; 0x52a <__stack+0xcb>
 				exit_cont = TRUE;
- 552:	81 e0       	ldi	r24, 0x01	; 1
- 554:	80 93 76 00 	sts	0x0076, r24	; 0x800076 <__data_end>
- 558:	04 c0       	rjmp	.+8      	; 0x562 <__stack+0x103>
+ 522:	81 e0       	ldi	r24, 0x01	; 1
+ 524:	80 93 76 00 	sts	0x0076, r24	; 0x800076 <__data_end>
+ 528:	04 c0       	rjmp	.+8      	; 0x532 <__stack+0xd3>
 			}
 			
 			/* button condition is required so loop does not instantly start again */
 			if (exit_cont && !(btn_stat_reg & (1 << TS_BTN)))
- 55a:	80 91 76 00 	lds	r24, 0x0076	; 0x800076 <__data_end>
- 55e:	88 23       	and	r24, r24
- 560:	c1 f0       	breq	.+48     	; 0x592 <__stack+0x133>
- 562:	80 91 83 00 	lds	r24, 0x0083	; 0x800083 <btn_stat_reg>
- 566:	81 fd       	sbrc	r24, 1
- 568:	14 c0       	rjmp	.+40     	; 0x592 <__stack+0x133>
+ 52a:	80 91 76 00 	lds	r24, 0x0076	; 0x800076 <__data_end>
+ 52e:	88 23       	and	r24, r24
+ 530:	c1 f0       	breq	.+48     	; 0x562 <__stack+0x103>
+ 532:	80 91 83 00 	lds	r24, 0x0083	; 0x800083 <btn_stat_reg>
+ 536:	81 fd       	sbrc	r24, 1
+ 538:	14 c0       	rjmp	.+40     	; 0x562 <__stack+0x103>
 			{
 				ctrl_reg &= ~(1 << TURN_OFF_TS);	// unset turn off turn signal
- 56a:	80 91 81 00 	lds	r24, 0x0081	; 0x800081 <ctrl_reg>
- 56e:	8b 7f       	andi	r24, 0xFB	; 251
- 570:	80 93 81 00 	sts	0x0081, r24	; 0x800081 <ctrl_reg>
+ 53a:	80 91 81 00 	lds	r24, 0x0081	; 0x800081 <ctrl_reg>
+ 53e:	8b 7f       	andi	r24, 0xFB	; 251
+ 540:	80 93 81 00 	sts	0x0081, r24	; 0x800081 <ctrl_reg>
 				
 				ctr = 0;
- 574:	10 92 78 00 	sts	0x0078, r1	; 0x800078 <ctr.1791+0x1>
- 578:	10 92 77 00 	sts	0x0077, r1	; 0x800077 <ctr.1791>
+ 544:	10 92 78 00 	sts	0x0078, r1	; 0x800078 <ctr.1791+0x1>
+ 548:	10 92 77 00 	sts	0x0077, r1	; 0x800077 <ctr.1791>
 				turn_sig_state = TS_IDLE;
- 57c:	81 e0       	ldi	r24, 0x01	; 1
- 57e:	80 93 61 00 	sts	0x0061, r24	; 0x800061 <turn_sig_state>
+ 54c:	81 e0       	ldi	r24, 0x01	; 1
+ 54e:	80 93 60 00 	sts	0x0060, r24	; 0x800060 <__DATA_REGION_ORIGIN__>
 				exit_cont = FALSE;
- 582:	10 92 76 00 	sts	0x0076, r1	; 0x800076 <__data_end>
+ 552:	10 92 76 00 	sts	0x0076, r1	; 0x800076 <__data_end>
 				/* manually turn off led */
 				PORTB &= ~(1 << PB4);
- 586:	c4 98       	cbi	0x18, 4	; 24
+ 556:	c4 98       	cbi	0x18, 4	; 24
 				lcd_stat_reg &= ~(1 << TURN_SIG);
- 588:	80 91 82 00 	lds	r24, 0x0082	; 0x800082 <lcd_stat_reg>
- 58c:	8d 7f       	andi	r24, 0xFD	; 253
- 58e:	80 93 82 00 	sts	0x0082, r24	; 0x800082 <lcd_stat_reg>
-			
+ 558:	80 91 82 00 	lds	r24, 0x0082	; 0x800082 <lcd_stat_reg>
+ 55c:	8d 7f       	andi	r24, 0xFD	; 253
+ 55e:	80 93 82 00 	sts	0x0082, r24	; 0x800082 <lcd_stat_reg>
+			}
 			break;
 		default:
 			break;
 	}
 }
- 592:	9f 91       	pop	r25
- 594:	8f 91       	pop	r24
- 596:	4f 91       	pop	r20
- 598:	3f 91       	pop	r19
- 59a:	2f 91       	pop	r18
- 59c:	0f 90       	pop	r0
- 59e:	0f be       	out	0x3f, r0	; 63
- 5a0:	0f 90       	pop	r0
- 5a2:	1f 90       	pop	r1
- 5a4:	18 95       	reti
+ 562:	9f 91       	pop	r25
+ 564:	8f 91       	pop	r24
+ 566:	4f 91       	pop	r20
+ 568:	3f 91       	pop	r19
+ 56a:	2f 91       	pop	r18
+ 56c:	0f 90       	pop	r0
+ 56e:	0f be       	out	0x3f, r0	; 63
+ 570:	0f 90       	pop	r0
+ 572:	1f 90       	pop	r1
+ 574:	18 95       	reti
 
-000005a6 <__vector_4>:
+00000576 <__vector_4>:
 
 ISR (TIMER2_OVF_vect)
 {
- 5a6:	1f 92       	push	r1
- 5a8:	0f 92       	push	r0
- 5aa:	0f b6       	in	r0, 0x3f	; 63
- 5ac:	0f 92       	push	r0
- 5ae:	11 24       	eor	r1, r1
+ 576:	1f 92       	push	r1
+ 578:	0f 92       	push	r0
+ 57a:	0f b6       	in	r0, 0x3f	; 63
+ 57c:	0f 92       	push	r0
+ 57e:	11 24       	eor	r1, r1
 	
- 5b0:	0f 90       	pop	r0
- 5b2:	0f be       	out	0x3f, r0	; 63
- 5b4:	0f 90       	pop	r0
- 5b6:	1f 90       	pop	r1
- 5b8:	18 95       	reti
+ 580:	0f 90       	pop	r0
+ 582:	0f be       	out	0x3f, r0	; 63
+ 584:	0f 90       	pop	r0
+ 586:	1f 90       	pop	r1
+ 588:	18 95       	reti
 
-000005ba <_exit>:
- 5ba:	f8 94       	cli
+0000058a <_exit>:
+ 58a:	f8 94       	cli
 
-000005bc <__stop_program>:
- 5bc:	ff cf       	rjmp	.-2      	; 0x5bc <__stop_program>
+0000058c <__stop_program>:
+ 58c:	ff cf       	rjmp	.-2      	; 0x58c <__stop_program>
