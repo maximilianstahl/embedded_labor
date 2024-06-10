@@ -112,8 +112,8 @@ void timer_intr_init(void)
 	TCCR1B = (1 << WGM12);
 	TCCR1B |= (1 << CS11) | (1 << CS10);	// prescaler 64 (for 1 ms interrupt)
 	/* Set the compare values for OCR1A and OCR1B */
-	OCR1A = 56;		// 3,686,400 / ?64 * 1,000 - 1 = 57,6 ~= 56
-	OCR1B = 56;		// 3,686,400 / ?64 * 1,000 - 1 = 57,6 ~= 56
+	OCR1A = 56;		// 3,686,400 / 64 * 1,000 - 1 = 57,6 ~= 56
+	OCR1B = 56;		// 3,686,400 / 64 * 1,000 - 1 = 57,6 ~= 56
 	
 	/* Timer2 settings */
 	TCCR2 = (1 << WGM21) | (1 << WGM20) | (1 << COM21) | (1 << CS21);		// enable fast pwm, with clear oc2 at compare match, prescaler 8
@@ -194,28 +194,29 @@ void turn_signal_processing(void)
 				PORTB ^= (1 << PB4);				// toggle led
 				lcd_stat_reg ^= (1 << TURN_SIG);	// toggle status register
 				ctr = 0;
+				
+				/* only allow exit after loop (button condition is required so loop does not instantly start again) */
+				if (exit_cont && !(btn_stat_reg & (1 << TS_BTN)))
+				{
+					ctrl_reg &= ~(1 << TURN_OFF_TS);	// unset turn off turn signal
+								
+					ctr = 0;
+					turn_sig_state = TS_IDLE;
+					exit_cont = FALSE;
+					/* manually turn off led */
+					PORTB &= ~(1 << PB4);
+					lcd_stat_reg &= ~(1 << TURN_SIG);
+				}
 			}
-			else {
+			else {	
 				ctr += 1;
 			}
-		
+			
 			/* check if either button is pressed again or steering is done*/
 			if ((btn_stat_reg & (1 << TS_BTN)) || ctrl_reg & (1 << TURN_OFF_TS)) {
 				exit_cont = TRUE;
 			}
 		
-			/* button condition is required so loop does not instantly start again */
-			if (exit_cont && !(btn_stat_reg & (1 << TS_BTN)))
-			{
-				ctrl_reg &= ~(1 << TURN_OFF_TS);	// unset turn off turn signal
-			
-				ctr = 0;
-				turn_sig_state = TS_IDLE;
-				exit_cont = FALSE;
-				/* manually turn off led */
-				PORTB &= ~(1 << PB4);
-				lcd_stat_reg &= ~(1 << TURN_SIG);
-			}
 			break;
 		default:
 			/* if we somehow land here, reset turn signal state */
