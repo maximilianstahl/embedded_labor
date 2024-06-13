@@ -45,6 +45,12 @@ typedef enum {
 	TS_CONT = 3		// continuous mode
 } TurnSigState;
 
+typedef enum {
+	LB_IDLE = 1,	// idle state
+	LB_DIM = 2,		// dimming mode
+	LB_ON = 3		// on mode
+} LowBeamState;
+
 #define IS_SET(reg, bit)		((reg) & (1 << (bit)))
 #define SET_BIT(reg, bit)		((reg) |= (1 << (bit)))
 #define CLEAR_BIT(reg, bit)		((reg) &= ~(1 << (bit)))
@@ -54,10 +60,16 @@ volatile uint8_t btn_stat_reg = 0x00;	// register for button statuses
 volatile uint8_t lcd_stat_reg = 0x00;	// register to tell LCD what to display
 volatile uint8_t ctrl_reg = 0x00;		// register for general control exchange
 
+volatile uint8_t dim_val = 0xFF;
+
 void turn_signal_processing(void);
+void low_beam_processing(void);
+void steering_processing(void);
 void turn_signal_button_debounce(void);
+void low_beam_button_debounce(void);
 void timer_intr_init(void);
 void adc_init(void);
+
 
 int main(void)
 {
@@ -65,9 +77,15 @@ int main(void)
 	char lcd_str[17];
 	
 	DDRD |= 0xFC;					// set bits 2...7 as outputs
-	DDRB |= (1 << PB4);				// PB4 as output
-	DDRC &= ~(1 << PC0);			// PC0 as input
-	PORTC |= (1 << PC2);			// PC2 as input
+	DDRB |= (1 << PB4);				// PB4 as output for turn signal
+	DDRB |= (1 << PB3);				// PB3 as output for steering beam
+	DDRB |= (1 << PB2);				// PB3 as output for low beam
+	DDRC &= ~(1 << PC4);			// PC4 as input for steering
+	PORTC |= (1 << PC3);			// PC3 as input	for low beam
+	PORTC |= (1 << PC2);			// PC2 as input for turn signal
+	
+	/* initially turn off led (active low) */
+	PORTB |= (1 << PB4);
 	
 	timer_intr_init();				// init timer counter interrupts
 	lcd_init();						// init LCD
@@ -75,27 +93,45 @@ int main(void)
 	
 	while (TRUE)
 	{
+		// wenn adc2 fertig auslesen -> setup steering, start adc1
+		// wenn adc1 fertig auslesen -> setup velo, start adc2
+		
+		lcd_clear();
+		
 		if ((lcd_stat_reg & (1 << TURN_SIG))) {
 			lcd_set_cursor(0, 0);			// write to the first column of the first row
-			lcd_text("ON ");				// put value to LCD
+			lcd_text("TS ON ");				// put value to LCD
 		}
 		else {
 			lcd_set_cursor(0, 0);			// write to the first column of the first row
-			lcd_text("OFF");				// put value to LCD
+			lcd_text("TS OFF");				// put value to LCD
+		}
+		
+		if ((lcd_stat_reg & (1 << LOW_BEAM))) {
+			lcd_set_cursor(0, 7);			// write to the fourth column of the first row
+			lcd_text("LB ON ");				// put value to LCD
+		}
+		else {
+			lcd_set_cursor(0, 7);			// write to the fourth column of the first row
+			lcd_text("LB OFF");				// put value to LCD
 		}
 		
 		if ((lcd_stat_reg & (1 << STEERING))) {
-			lcd_set_cursor(0, 4);			// write to the fourth column of the first row
-			lcd_text("TRUE ");				// put value to LCD
+			lcd_set_cursor(0, 14);			// write to the fourth column of the first row
+			lcd_text("T");				// put value to LCD
 		}
 		else {
-			lcd_set_cursor(0, 4);			// write to the fourth column of the first row
-			lcd_text("FALSE");				// put value to LCD
+			lcd_set_cursor(0, 14);			// write to the fourth column of the first row
+			lcd_text("F");				// put value to LCD
 		}
 		
 		AD_val = ADCH;
 		int2ascii(AD_val, lcd_str);			// convert int to ascii representation
 		lcd_set_cursor(1, 0);				// write to the first column of the second row
+		lcd_text(lcd_str);					// put value to LCD
+		
+		int2ascii(dim_val, lcd_str);			// convert int to ascii representation
+		lcd_set_cursor(1, 4);				// write to the first column of the second row
 		lcd_text(lcd_str);					// put value to LCD
 		
 		_delay_ms(100);
@@ -107,24 +143,40 @@ void timer_intr_init(void)
 	/* Timer0 settings */
 	TCCR0 = (1 << CS01);	// prescaler 8
 	
-	/* Timer1 settings */
-	TCCR1A = 0x00;				// Set Timer1 to CTC mode (WGM12),
-	TCCR1B = (1 << WGM12);
-	TCCR1B |= (1 << CS11) | (1 << CS10);	// prescaler 64 (for 1 ms interrupt)
-	/* Set the compare values for OCR1A and OCR1B */
-	OCR1A = 56;		// 3,686,400 / 64 * 1,000 - 1 = 57,6 ~= 56
-	OCR1B = 56;		// 3,686,400 / 64 * 1,000 - 1 = 57,6 ~= 56
+	/* Timer1 settings */	
+    /* Set the Timer/Counter1 to Fast PWM mode with ICR1 as top value (Mode 14) */
+    TCCR1A |= (1 << WGM11);
+    TCCR1B |= (1 << WGM12) | (1 << WGM13);
+
+    /* Set Compare Output Mode for channel B to non-inverting mode */
+    TCCR1A |= (1 << COM1B1);
+    TCCR1A &= ~(1 << COM1B0);
+	
+	/* Set the prescaler to 8 and start the timer */
+	TCCR1B |= (1 << CS11);
+	
+    /* Set ICR1 for 1 kHz PWM frequency (16 bit) */
+    ICR1 = 460;
+
+    /* Set duty cycle for channel B (16 bit) (0 % duty = 0, 100 % = 460) */
+    OCR1B = 460;
 	
 	/* Timer2 settings */
-	TCCR2 = (1 << WGM21) | (1 << WGM20) | (1 << COM21) | (1 << CS21);		// enable fast pwm, with clear oc2 at compare match, prescaler 8
+	/* enable fast PWM, with clear oc2 at compare match, prescaler 8 */
+	TCCR2 = (1 << WGM21) | (1 << WGM20) | (1 << COM21) | (1 << CS21);		
+	/* set duty cycle to 100 % since headlight has inverted logic (8 bit register) */
+	OCR2 = 255;
 	
-	TIMSK |= (1 << TOIE2) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE0);	// overflow interrupt
-	sei();													// global interrupt enable
+	/* overflow interrupt */
+	TIMSK |= (1 << TOIE1) | (1 << TOIE0);
+	
+	/* global interrupt enable */
+	sei();	
 }
 
 void adc_init(void)
 {
-	ADMUX |= (1 << REFS0) | (1 << ADLAR);	// AVcc as reference, left adjust -> 8 bit result
+	ADMUX |= (1 << REFS0) | (1 << ADLAR) | (1 << MUX2);	// AVcc as reference, left adjust -> 8 bit result
 	ADCSRA |= (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADFR);	// prescaler to 64, free running, enable adc, start conversion
 	
 	ADCSRA |= (1 << ADSC);	// start conversion
@@ -144,8 +196,8 @@ void turn_signal_processing(void)
 				/* if button is pressed and valid, go to comfort mode */
 				turn_sig_state = TS_COMF;
 			
-				/* initially turn on LED */
-				PORTB |= (1 << PB4);
+				/* initially turn on LED (active low) */
+				PORTB &= ~(1 << PB4);
 				lcd_stat_reg |= (1 << TURN_SIG);
 			}
 			break;
@@ -203,8 +255,8 @@ void turn_signal_processing(void)
 					ctr = 0;
 					turn_sig_state = TS_IDLE;
 					exit_cont = FALSE;
-					/* manually turn off led */
-					PORTB &= ~(1 << PB4);
+					/* manually turn off led (active low) */
+					PORTB |= (1 << PB4);
 					lcd_stat_reg &= ~(1 << TURN_SIG);
 				}
 			}
@@ -220,8 +272,73 @@ void turn_signal_processing(void)
 			break;
 		default:
 			/* if we somehow land here, reset turn signal state */
-			turn_sig_state = BTN_RELEASED;
+			turn_sig_state = TS_IDLE;
 			break;
+	}
+}
+
+void low_beam_processing(void)
+{
+	static LowBeamState low_beam_state = LB_IDLE;		// initial state is always idle
+	static uint16_t ctr = 0;
+	static uint8_t dim_cycl = 0;
+	static uint8_t exit_cont = FALSE;
+	
+	/* turn signal state machine */
+	switch (low_beam_state) {
+		case LB_IDLE:
+			if (btn_stat_reg & (1 << LB_BTN)) {
+				/* if button is pressed and valid, start dimming */
+				low_beam_state = LB_DIM;
+			}
+			break;
+		case LB_DIM:
+			if (dim_cycl < 10) {
+				if (ctr > 100) {
+					// increase oc1b
+					dim_val -= 25;
+					OCR2 = dim_val;
+					OCR1B = dim_val;
+					ctr = 0;
+					dim_cycl += 1;
+				}
+				else {
+					ctr += 1;
+				}
+			}
+			else {
+				low_beam_state = LB_ON;
+				dim_val = 0;
+				OCR2 = dim_val;
+				OCR1B = dim_val;
+				ctr = 0;
+				dim_cycl = 0;
+			}
+			break;
+		case LB_ON:
+				lcd_stat_reg |= (1 << LOW_BEAM);
+				
+				/* only allow exit after loop (button condition is required so loop does not instantly start again) */
+				if (exit_cont && !(btn_stat_reg & (1 << LB_BTN)))
+				{							
+					low_beam_state = LB_IDLE;
+					exit_cont = FALSE;
+					/* manually turn off led (active low) */
+					OCR2 = 255;
+					OCR1B = 460;
+					dim_val = 0xFF;
+					lcd_stat_reg &= ~(1 << LOW_BEAM);
+				}
+							
+				/* check if either button is pressed again or steering is done*/
+				if ((btn_stat_reg & (1 << LB_BTN))) {
+					exit_cont = TRUE;
+				}
+			break;
+		default:
+			/* if we somehow land here, reset turn signal state */
+			low_beam_state = LB_IDLE;
+		break;
 	}
 }
 
@@ -290,7 +407,72 @@ void turn_signal_button_debounce(void)
 	}
 }
 
-ISR (TIMER0_OVF_vect)
+void low_beam_button_debounce(void)
+{
+	static ButtonState lb_btn_state = BTN_RELEASED;		// initial state is always button released
+	static uint16_t ctr = 0;
+	
+	/* turn signal state machine */
+	switch (lb_btn_state) {
+		case BTN_RELEASED:
+			if (!(PINC & (1 << PC3))) {
+				/* if button is pressed, start debouncing */
+				lb_btn_state = BTN_PRESSED_DB;
+			}
+			break;
+		case BTN_PRESSED_DB:
+			/* debouncing */
+			if (ctr > DB_TIME_MS) {
+				if (!(PINC & (1 << PC3))) {
+					/* debounce successful -> set button state and go to pressed state*/
+					btn_stat_reg |= (1 << LB_BTN);
+					lb_btn_state = BTN_PRESSED;
+				}
+				else {
+					/* debounce unsuccessful -> back to not pressed */
+					lb_btn_state = BTN_RELEASED;
+				}
+				/* reset db counter */
+				ctr = 0;
+			}
+			else {
+				ctr += 1;
+			}
+			break;
+		case BTN_PRESSED:
+			/* check if button is released*/
+			if (PINC & (1 << PC3)) {
+				/* if so, reset button state and go to released */
+				lb_btn_state = BTN_RELEASED_DB;
+			}
+			break;
+		case BTN_RELEASED_DB:
+			/* button release debounce (prevents strange behavior)*/
+			if (ctr > DB_TIME_MS) {
+				if (PINC & (1 << PC3)) {
+					/* debounce successful -> set button state and go to pressed state*/
+					btn_stat_reg &= ~(1 << LB_BTN);
+					lb_btn_state = BTN_RELEASED;
+				}
+				else {
+					/* debounce unsuccessful -> back to pressed */
+					lb_btn_state = BTN_PRESSED;
+				}
+				/* reset db counter */
+				ctr = 0;
+			}
+			else {
+				ctr += 1;
+			}
+			break;
+		default:
+			/* if we somehow land here, reset button state */
+			lb_btn_state = BTN_RELEASED;
+			break;
+	}
+}
+
+void steering_processing(void)
 {
 	static uint8_t steering_initiated = FALSE;	// var to tell if steering process is initiated
 
@@ -316,19 +498,21 @@ ISR (TIMER0_OVF_vect)
 	}
 }
 
-ISR (TIMER1_COMPA_vect)
+ISR (TIMER0_OVF_vect)
 {
-	/* ISR primarily used for debouncing */
-	turn_signal_button_debounce();
+	steering_processing();
 }
 
-ISR (TIMER1_COMPB_vect)
+ISR (TIMER1_OVF_vect)
 {
+	// TODO pwm 1 khz frequenz -> über icr1
+	// OCR1B stellt nur duty cycle ein
+	
+	/* debounce routines */
+	turn_signal_button_debounce();
+	low_beam_button_debounce();
+	
 	/* ISR primarily used for processing */
 	turn_signal_processing();
-}
-
-ISR (TIMER2_OVF_vect)
-{
-	
+	low_beam_processing();
 }
