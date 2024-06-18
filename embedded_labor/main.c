@@ -6,31 +6,35 @@
  */ 
 
 /* F_CPU needs to be defined before delay is imported */
-#define	F_CPU		3686400
+#define	F_CPU			3686400
 
 #include "lcd.h"
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
 
-#define TRUE		0x01
-#define FALSE		0x00
+#define TRUE			0x01
+#define FALSE			0x00
 
-#define DB_TIME_MS	50	
+#define DB_TIME_MS		50	
 
 /* defines for button status register */
-#define TS_BTN		1
-#define LB_BTN		2
+#define TS_BTN			1
+#define LB_BTN			2
 
 /* defines for lcd status register */
-#define TURN_SIG	1
-#define LOW_BEAM	2
-#define	CORNERING	3	
-#define STEERING	4
+#define TURN_SIG		1
+#define LOW_BEAM		2
+#define	CORNERING		3	
+#define STEERING		4
 
 /* defines for control register*/
-#define STEER_DONE	1
-#define TURN_OFF_TS	2
+#define STEER_DONE		1
+#define TURN_OFF_TS		2
+
+/* defines for adc channels */
+#define STEER_ADC_CH	4
+#define VELO_ADC_CH		5
 
 typedef enum {
 	BTN_RELEASED = 1,	// released state
@@ -51,6 +55,12 @@ typedef enum {
 	LB_ON = 3		// on mode
 } LowBeamState;
 
+typedef enum {
+	CL_IDLE = 1,	// idle state
+	CL_DIM = 2,		// dimming mode
+	CL_ON = 3		// on mode
+} CorneringLightState;
+
 #define IS_SET(reg, bit)		((reg) & (1 << (bit)))
 #define SET_BIT(reg, bit)		((reg) |= (1 << (bit)))
 #define CLEAR_BIT(reg, bit)		((reg) &= ~(1 << (bit)))
@@ -60,26 +70,32 @@ volatile uint8_t btn_stat_reg = 0x00;	// register for button statuses
 volatile uint8_t lcd_stat_reg = 0x00;	// register to tell LCD what to display
 volatile uint8_t ctrl_reg = 0x00;		// register for general control exchange
 
-volatile uint8_t dim_val = 0xFF;
+void timer_intr_init(void);
+void adc_init(void);
+
+void turn_signal_button_debounce(void);
+void low_beam_button_debounce(void);
 
 void turn_signal_processing(void);
 void low_beam_processing(void);
-void steering_processing(void);
-void turn_signal_button_debounce(void);
-void low_beam_button_debounce(void);
-void timer_intr_init(void);
-void adc_init(void);
+void cornering_light_processing(void);
+void steering_processing(uint8_t *steering_val);
+void velocity_processing(uint8_t *velo_val);
+
+void read_adcs(uint8_t *steering_val, uint8_t *velo_val);
 
 
 int main(void)
 {
-	uint8_t AD_val = 0;				// define var ad value
+	uint8_t steering_val = 0, velo_val = 0;		// define vars for steering and velocity adc values
 	char lcd_str[17];
+
 	
 	DDRD |= 0xFC;					// set bits 2...7 as outputs
 	DDRB |= (1 << PB4);				// PB4 as output for turn signal
 	DDRB |= (1 << PB3);				// PB3 as output for steering beam
 	DDRB |= (1 << PB2);				// PB3 as output for low beam
+	DDRC &= ~(1 << PC5);			// PC5 as input for velocity
 	DDRC &= ~(1 << PC4);			// PC4 as input for steering
 	PORTC |= (1 << PC3);			// PC3 as input	for low beam
 	PORTC |= (1 << PC2);			// PC2 as input for turn signal
@@ -89,48 +105,50 @@ int main(void)
 	
 	timer_intr_init();				// init timer counter interrupts
 	lcd_init();						// init LCD
-	adc_init();						// init analog digital converter
+	adc_init();						// init analog digital converters
 	
 	while (TRUE)
 	{
-		// wenn adc2 fertig auslesen -> setup steering, start adc1
-		// wenn adc1 fertig auslesen -> setup velo, start adc2
+		/* read adc values and process these values */
+		read_adcs(&steering_val, &velo_val);
+		steering_processing(&steering_val);
+		velocity_processing(&velo_val);
 		
+		/* clear LCD before writing to it */
 		lcd_clear();
 		
 		if ((lcd_stat_reg & (1 << TURN_SIG))) {
 			lcd_set_cursor(0, 0);			// write to the first column of the first row
-			lcd_text("TS ON ");				// put value to LCD
+			lcd_text("TS T");				// put value to LCD
 		}
 		else {
 			lcd_set_cursor(0, 0);			// write to the first column of the first row
-			lcd_text("TS OFF");				// put value to LCD
+			lcd_text("TS F");				// put value to LCD
 		}
 		
 		if ((lcd_stat_reg & (1 << LOW_BEAM))) {
-			lcd_set_cursor(0, 7);			// write to the fourth column of the first row
-			lcd_text("LB ON ");				// put value to LCD
+			lcd_set_cursor(0, 5);			// write to the fourth column of the first row
+			lcd_text("LB T");				// put value to LCD
 		}
 		else {
-			lcd_set_cursor(0, 7);			// write to the fourth column of the first row
-			lcd_text("LB OFF");				// put value to LCD
+			lcd_set_cursor(0, 5);			// write to the fourth column of the first row
+			lcd_text("LB F");				// put value to LCD
 		}
 		
-		if ((lcd_stat_reg & (1 << STEERING))) {
-			lcd_set_cursor(0, 14);			// write to the fourth column of the first row
-			lcd_text("T");				// put value to LCD
+		if ((lcd_stat_reg & (1 << CORNERING))) {
+			lcd_set_cursor(0, 10);			// write to the fourth column of the first row
+			lcd_text("CL T");				// put value to LCD
 		}
 		else {
-			lcd_set_cursor(0, 14);			// write to the fourth column of the first row
-			lcd_text("F");				// put value to LCD
+			lcd_set_cursor(0, 10);			// write to the fourth column of the first row
+			lcd_text("CL F");				// put value to LCD
 		}
 		
-		AD_val = ADCH;
-		int2ascii(AD_val, lcd_str);			// convert int to ascii representation
+		int2ascii(steering_val, lcd_str);			// convert int to ascii representation
 		lcd_set_cursor(1, 0);				// write to the first column of the second row
 		lcd_text(lcd_str);					// put value to LCD
 		
-		int2ascii(dim_val, lcd_str);			// convert int to ascii representation
+		int2ascii(velo_val, lcd_str);			// convert int to ascii representation
 		lcd_set_cursor(1, 4);				// write to the first column of the second row
 		lcd_text(lcd_str);					// put value to LCD
 		
@@ -140,9 +158,6 @@ int main(void)
 
 void timer_intr_init(void)
 {
-	/* Timer0 settings */
-	TCCR0 = (1 << CS01);	// prescaler 8
-	
 	/* Timer1 settings */	
     /* Set the Timer/Counter1 to Fast PWM mode with ICR1 as top value (Mode 14) */
     TCCR1A |= (1 << WGM11);
@@ -168,7 +183,7 @@ void timer_intr_init(void)
 	OCR2 = 255;
 	
 	/* overflow interrupt */
-	TIMSK |= (1 << TOIE1) | (1 << TOIE0);
+	TIMSK |= (1 << TOIE1);// | (1 << TOIE0);
 	
 	/* global interrupt enable */
 	sei();	
@@ -176,10 +191,32 @@ void timer_intr_init(void)
 
 void adc_init(void)
 {
-	ADMUX |= (1 << REFS0) | (1 << ADLAR) | (1 << MUX2);	// AVcc as reference, left adjust -> 8 bit result
-	ADCSRA |= (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADFR);	// prescaler to 64, free running, enable adc, start conversion
+	ADMUX |= (1 << REFS0) | (1 << ADLAR);	// AVcc as reference, left adjust -> 8 bit result
+	ADCSRA |= (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1);	// prescaler to 64, enable adc
+}
+
+void read_adcs(uint8_t *steering_val, uint8_t *velo_val)
+{
+	static uint8_t curr_adc_ch = STEER_ADC_CH;
 	
-	ADCSRA |= (1 << ADSC);	// start conversion
+	/* read value and change channel if conversion is finished */
+	if (!(ADCSRA & (1<<ADSC))) {
+		if (curr_adc_ch == STEER_ADC_CH) {
+			*steering_val = ADCH;
+			curr_adc_ch = VELO_ADC_CH;
+		}
+		else if (curr_adc_ch == VELO_ADC_CH) {
+			*velo_val = ADCH;
+			curr_adc_ch = STEER_ADC_CH;
+		}
+		else {
+			/* we should not land here, if we do -> reset to initial value */
+			curr_adc_ch = STEER_ADC_CH;
+		}
+
+		ADMUX = (ADMUX & 0xF8) | curr_adc_ch;
+		ADCSRA |= (1<<ADSC);	// Start single conversion
+	}
 }
 
 void turn_signal_processing(void) 
@@ -283,6 +320,7 @@ void low_beam_processing(void)
 	static uint16_t ctr = 0;
 	static uint8_t dim_cycl = 0;
 	static uint8_t exit_cont = FALSE;
+	static uint16_t dim_val = 460;
 	
 	/* turn signal state machine */
 	switch (low_beam_state) {
@@ -295,9 +333,8 @@ void low_beam_processing(void)
 		case LB_DIM:
 			if (dim_cycl < 10) {
 				if (ctr > 100) {
-					// increase oc1b
-					dim_val -= 25;
-					OCR2 = dim_val;
+					/* decrease OCR1B every 100 ms */
+					dim_val -= 46;
 					OCR1B = dim_val;
 					ctr = 0;
 					dim_cycl += 1;
@@ -309,7 +346,6 @@ void low_beam_processing(void)
 			else {
 				low_beam_state = LB_ON;
 				dim_val = 0;
-				OCR2 = dim_val;
 				OCR1B = dim_val;
 				ctr = 0;
 				dim_cycl = 0;
@@ -324,9 +360,8 @@ void low_beam_processing(void)
 					low_beam_state = LB_IDLE;
 					exit_cont = FALSE;
 					/* manually turn off led (active low) */
-					OCR2 = 255;
-					OCR1B = 460;
-					dim_val = 0xFF;
+					dim_val = 460;
+					OCR1B = dim_val;
 					lcd_stat_reg &= ~(1 << LOW_BEAM);
 				}
 							
@@ -339,6 +374,69 @@ void low_beam_processing(void)
 			/* if we somehow land here, reset turn signal state */
 			low_beam_state = LB_IDLE;
 		break;
+	}
+}
+
+void cornering_light_processing(void)
+{
+	static CorneringLightState corn_ligth_state = CL_IDLE;		// initial state is always idle
+	static uint16_t ctr = 0;
+	static uint8_t dim_cycl = 0;
+	static uint8_t exit_cont = FALSE;
+	static uint8_t dim_val = 255;
+	
+	/* turn signal state machine */
+	switch (corn_ligth_state) {
+		case CL_IDLE:
+			if (btn_stat_reg & (1 << LB_BTN)) {
+				/* if button is pressed and valid, start dimming */
+				corn_ligth_state = CL_DIM;
+			}
+			break;
+		case CL_DIM:
+			if (dim_cycl < 10) {
+				if (ctr > 100) {
+					/* decrease OCR2 every 100 ms */
+					dim_val -= 25;
+					OCR2 = dim_val;
+					ctr = 0;
+					dim_cycl += 1;
+				}
+				else {
+					ctr += 1;
+				}
+			}
+			else {
+				corn_ligth_state = CL_ON;
+				dim_val = 0;
+				OCR2 = dim_val;
+				ctr = 0;
+				dim_cycl = 0;
+			}
+			break;
+		case CL_ON:
+			lcd_stat_reg |= (1 << CORNERING);
+		
+			/* only allow exit after loop (button condition is required so loop does not instantly start again) */
+			if (exit_cont && !(btn_stat_reg & (1 << LB_BTN)))
+			{
+				corn_ligth_state = CL_IDLE;
+				exit_cont = FALSE;
+				/* manually turn off led (active low) */
+				dim_val = 255;
+				OCR2 = dim_val;
+				lcd_stat_reg &= ~(1 << CORNERING);
+			}
+		
+			/* check if either button is pressed again or steering is done*/
+			if ((btn_stat_reg & (1 << LB_BTN))) {
+				exit_cont = TRUE;
+			}
+			break;
+		default:
+			/* if we somehow land here, reset turn signal state */
+			corn_ligth_state = CL_IDLE;
+			break;
 	}
 }
 
@@ -472,13 +570,14 @@ void low_beam_button_debounce(void)
 	}
 }
 
-void steering_processing(void)
+void steering_processing(uint8_t *steering_val)
 {
+	// TODO rework, quite ugly (?)
 	static uint8_t steering_initiated = FALSE;	// var to tell if steering process is initiated
 
 	/* steering processing */
 	if (!steering_initiated) {
-		if (!(((127 - 42) < ADCH) && (ADCH < (127 + 42)))) {
+		if (!(((127 - 42) < *steering_val) && (*steering_val < (127 + 42)))) {
 			/* steering process is initiated -> not -10° < lw < 10° */
 			steering_initiated = TRUE;
 			lcd_stat_reg &= ~(1 << STEERING);	// unset steering done
@@ -489,7 +588,7 @@ void steering_processing(void)
 		}
 	}
 	else {
-		if (((127 - 42) < ADCH) && (ADCH < (127 + 42))) {
+		if (((127 - 42) < *steering_val) && (*steering_val < (127 + 42))) {
 			/* steering done -> -10° < lw < 10° */
 			steering_initiated = FALSE;
 			lcd_stat_reg |= (1 << STEERING);	// set steering done
@@ -498,16 +597,13 @@ void steering_processing(void)
 	}
 }
 
-ISR (TIMER0_OVF_vect)
+void velocity_processing(uint8_t *velo_val)
 {
-	steering_processing();
+	// TODO rework, quite ugly (?)
 }
 
 ISR (TIMER1_OVF_vect)
 {
-	// TODO pwm 1 khz frequenz -> über icr1
-	// OCR1B stellt nur duty cycle ein
-	
 	/* debounce routines */
 	turn_signal_button_debounce();
 	low_beam_button_debounce();
@@ -515,4 +611,5 @@ ISR (TIMER1_OVF_vect)
 	/* ISR primarily used for processing */
 	turn_signal_processing();
 	low_beam_processing();
+	cornering_light_processing();
 }
