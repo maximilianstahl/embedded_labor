@@ -16,6 +16,7 @@
 #define TRUE			0x01
 #define FALSE			0x00
 
+/* debounce time in milliseconds */
 #define DB_TIME_MS		50	
 
 /* defines for button status register */
@@ -31,6 +32,8 @@
 /* defines for control register*/
 #define STEER_DONE		1
 #define TURN_OFF_TS		2
+#define TS_ON			3
+#define LOW_BEAM_ON		4		
 
 /* defines for adc channels */
 #define STEER_ADC_CH	4
@@ -61,10 +64,15 @@ typedef enum {
 	CL_ON = 3		// on mode
 } CorneringLightState;
 
+/* macros to improve code readability */
 #define IS_SET(reg, bit)		((reg) & (1 << (bit)))
 #define SET_BIT(reg, bit)		((reg) |= (1 << (bit)))
 #define CLEAR_BIT(reg, bit)		((reg) &= ~(1 << (bit)))
 #define TOGGLE_BIT(reg, bit)	((reg) ^= (1 << (bit)))
+
+/* macros to set stepper motor direction */
+#define SET_STEP_RIGHT()		(PORTC |= (1 << PC0))
+#define SET_STEP_LEFT()			(PORTC &= ~(1 << PC0))
 
 volatile uint8_t btn_stat_reg = 0x00;	// register for button statuses
 volatile uint8_t lcd_stat_reg = 0x00;	// register to tell LCD what to display
@@ -79,29 +87,35 @@ void low_beam_button_debounce(void);
 void turn_signal_processing(void);
 void low_beam_processing(void);
 void cornering_light_processing(void);
+void stepper_motor_processing(void);
+
 void steering_processing(uint8_t *steering_val);
 void velocity_processing(uint8_t *velo_val);
 
 void read_adcs(uint8_t *steering_val, uint8_t *velo_val);
 
+// TODO: there is a better way
+volatile uint8_t velo_value = 0;
+volatile uint8_t steer_value = 0;
 
 int main(void)
 {
 	uint8_t steering_val = 0, velo_val = 0;		// define vars for steering and velocity adc values
 	char lcd_str[17];
 
-	
 	DDRD |= 0xFC;					// set bits 2...7 as outputs
+	DDRB |= (1 << PB5);				// PB5 as output for stepper motor clock
 	DDRB |= (1 << PB4);				// PB4 as output for turn signal
 	DDRB |= (1 << PB3);				// PB3 as output for steering beam
 	DDRB |= (1 << PB2);				// PB3 as output for low beam
 	DDRC &= ~(1 << PC5);			// PC5 as input for velocity
 	DDRC &= ~(1 << PC4);			// PC4 as input for steering
-	PORTC |= (1 << PC3);			// PC3 as input	for low beam
-	PORTC |= (1 << PC2);			// PC2 as input for turn signal
+	PORTC |= (1 << PC3);			// PC3 as input	pull up for low beam
+	PORTC |= (1 << PC2);			// PC2 as input pull up for turn signal
+	DDRC |= (1 << PC0);				// PC0 as output for stepper motor cw/ccw
 	
-	/* initially turn off led (active low) */
-	PORTB |= (1 << PB4);
+	PORTB |= (1 << PB4);			// initially turn off led (active low)
+	PORTB &= ~(1 << PB5);
 	
 	timer_intr_init();				// init timer counter interrupts
 	lcd_init();						// init LCD
@@ -223,8 +237,7 @@ void turn_signal_processing(void)
 {
 	static TurnSigState turn_sig_state = TS_IDLE;		// initial state is always idle
 	static uint16_t ctr = 0, comf_ctr = 0, desc_ctr = 0;
-	static uint8_t go_to_cont = FALSE;
-	static uint8_t exit_cont = FALSE;
+	static uint8_t go_to_cont = FALSE, exit_cont = FALSE;
 	
 	/* turn signal state machine */
 	switch (turn_sig_state) {
@@ -232,7 +245,7 @@ void turn_signal_processing(void)
 			if (btn_stat_reg & (1 << TS_BTN)) {
 				/* if button is pressed and valid, go to comfort mode */
 				turn_sig_state = TS_COMF;
-			
+				
 				/* initially turn on LED (active low) */
 				PORTB &= ~(1 << PB4);
 				lcd_stat_reg |= (1 << TURN_SIG);
@@ -265,6 +278,8 @@ void turn_signal_processing(void)
 			else {
 				/* check if we go to continuous or if we stop */
 				if (go_to_cont) {
+					/* set control reg to let steering light know */
+					ctrl_reg |= (1 << TS_ON);
 					turn_sig_state = TS_CONT;
 					go_to_cont = FALSE;
 				}
@@ -287,8 +302,9 @@ void turn_signal_processing(void)
 				/* only allow exit after loop (button condition is required so loop does not instantly start again) */
 				if (exit_cont && !(btn_stat_reg & (1 << TS_BTN)))
 				{
-					ctrl_reg &= ~(1 << TURN_OFF_TS);	// unset turn off turn signal
-								
+					ctrl_reg &= ~(1 << TURN_OFF_TS);	// unset turn off turn signal								
+					ctrl_reg &= ~(1 << TS_ON);		/* unset control reg to let steering light know */
+					
 					ctr = 0;
 					turn_sig_state = TS_IDLE;
 					exit_cont = FALSE;
@@ -317,10 +333,32 @@ void turn_signal_processing(void)
 void low_beam_processing(void)
 {
 	static LowBeamState low_beam_state = LB_IDLE;		// initial state is always idle
-	static uint16_t ctr = 0;
+	static uint16_t ctr = 0, dim_val = 460;
 	static uint8_t dim_cycl = 0;
-	static uint8_t exit_cont = FALSE;
-	static uint16_t dim_val = 460;
+
+	void check_turn_off()
+	{
+		/* function to prevent duplicated code in low beam state machine */
+		static uint8_t exit_cont = FALSE;
+		
+		/* only allow exit after loop (button condition is required so loop does not instantly start again) */
+		if (exit_cont && !(btn_stat_reg & (1 << LB_BTN))) {
+			low_beam_state  = LB_IDLE;
+			exit_cont = FALSE;
+			dim_cycl = 0;
+			/* manually turn off led (active low) */
+			dim_val = 460;
+			OCR1B = dim_val;
+			lcd_stat_reg &= ~(1 << LOW_BEAM);
+			/* unset control reg to let steering light know */
+			ctrl_reg &= ~(1 << LOW_BEAM_ON);
+		}
+		
+		/* check if button is pressed again*/
+		if (btn_stat_reg & (1 << LB_BTN)) {
+			exit_cont = TRUE;
+		}
+	}
 	
 	/* turn signal state machine */
 	switch (low_beam_state) {
@@ -333,7 +371,7 @@ void low_beam_processing(void)
 		case LB_DIM:
 			if (dim_cycl < 10) {
 				if (ctr > 100) {
-					/* decrease OCR1B every 100 ms */
+					/* decrease OCR1B every 100 ms */ // TODO supposed to take 5s not 1s
 					dim_val -= 46;
 					OCR1B = dim_val;
 					ctr = 0;
@@ -350,25 +388,14 @@ void low_beam_processing(void)
 				ctr = 0;
 				dim_cycl = 0;
 			}
+			// check_turn_off();	// TODO does not work ???
 			break;
 		case LB_ON:
-				lcd_stat_reg |= (1 << LOW_BEAM);
-				
-				/* only allow exit after loop (button condition is required so loop does not instantly start again) */
-				if (exit_cont && !(btn_stat_reg & (1 << LB_BTN)))
-				{							
-					low_beam_state = LB_IDLE;
-					exit_cont = FALSE;
-					/* manually turn off led (active low) */
-					dim_val = 460;
-					OCR1B = dim_val;
-					lcd_stat_reg &= ~(1 << LOW_BEAM);
-				}
-							
-				/* check if either button is pressed again or steering is done*/
-				if ((btn_stat_reg & (1 << LB_BTN))) {
-					exit_cont = TRUE;
-				}
+			/* set LCD reg to let display know */
+			lcd_stat_reg |= (1 << LOW_BEAM);
+			/* set control reg to let steering light know */
+			ctrl_reg |= (1 << LOW_BEAM_ON);
+			check_turn_off();
 			break;
 		default:
 			/* if we somehow land here, reset turn signal state */
@@ -379,24 +406,22 @@ void low_beam_processing(void)
 
 void cornering_light_processing(void)
 {
-	static CorneringLightState corn_ligth_state = CL_IDLE;		// initial state is always idle
+	static CorneringLightState corn_light_state = CL_IDLE;		// initial state is always idle
 	static uint16_t ctr = 0;
-	static uint8_t dim_cycl = 0;
-	static uint8_t exit_cont = FALSE;
-	static uint8_t dim_val = 255;
-	
+	static uint8_t dim_cycl = 0, dim_val = 255;
+
 	/* turn signal state machine */
-	switch (corn_ligth_state) {
+	switch (corn_light_state) {
 		case CL_IDLE:
-			if (btn_stat_reg & (1 << LB_BTN)) {
-				/* if button is pressed and valid, start dimming */
-				corn_ligth_state = CL_DIM;
+			/* if either ts or steering */
+			if ((ctrl_reg & (1 << LOW_BEAM_ON)) && (velo_value < 20) && (ctrl_reg & (1 << TS_ON))) {
+				corn_light_state = CL_DIM;
 			}
 			break;
 		case CL_DIM:
 			if (dim_cycl < 10) {
 				if (ctr > 100) {
-					/* decrease OCR2 every 100 ms */
+					/* decrease OCR2 every 100 ms */	// TODO supposed to take 5s not 1s
 					dim_val -= 25;
 					OCR2 = dim_val;
 					ctr = 0;
@@ -407,7 +432,7 @@ void cornering_light_processing(void)
 				}
 			}
 			else {
-				corn_ligth_state = CL_ON;
+				corn_light_state = CL_ON;
 				dim_val = 0;
 				OCR2 = dim_val;
 				ctr = 0;
@@ -418,25 +443,40 @@ void cornering_light_processing(void)
 			lcd_stat_reg |= (1 << CORNERING);
 		
 			/* only allow exit after loop (button condition is required so loop does not instantly start again) */
-			if (exit_cont && !(btn_stat_reg & (1 << LB_BTN)))
+			if (!(ctrl_reg & (1 << LOW_BEAM_ON)) || !(velo_value < 20) || !(ctrl_reg & (1 << TS_ON)))
 			{
-				corn_ligth_state = CL_IDLE;
-				exit_cont = FALSE;
+				corn_light_state = CL_IDLE;
 				/* manually turn off led (active low) */
 				dim_val = 255;
 				OCR2 = dim_val;
 				lcd_stat_reg &= ~(1 << CORNERING);
 			}
-		
-			/* check if either button is pressed again or steering is done*/
-			if ((btn_stat_reg & (1 << LB_BTN))) {
-				exit_cont = TRUE;
-			}
 			break;
 		default:
 			/* if we somehow land here, reset turn signal state */
-			corn_ligth_state = CL_IDLE;
+			corn_light_state = CL_IDLE;
 			break;
+	}
+}
+
+void stepper_motor_processing(void)
+{
+	static uint16_t steps = 0;
+	static uint8_t ctr = 0;
+	
+	if (steps < 400) {
+		if (ctr > 5) {
+			PORTB ^= (1 << PB5);
+			ctr = 0;
+			steps += 1;
+		}
+		else {
+			ctr += 1;
+		}
+	}
+	else {
+		PORTC ^= (1 << PC0);
+		steps = 0;
 	}
 }
 
@@ -573,6 +613,7 @@ void low_beam_button_debounce(void)
 void steering_processing(uint8_t *steering_val)
 {
 	// TODO rework, quite ugly (?)
+	// TODO add greater than 10 deg detection for cornering light
 	static uint8_t steering_initiated = FALSE;	// var to tell if steering process is initiated
 
 	/* steering processing */
@@ -600,6 +641,7 @@ void steering_processing(uint8_t *steering_val)
 void velocity_processing(uint8_t *velo_val)
 {
 	// TODO rework, quite ugly (?)
+	velo_value = *velo_val;
 }
 
 ISR (TIMER1_OVF_vect)
@@ -612,4 +654,11 @@ ISR (TIMER1_OVF_vect)
 	turn_signal_processing();
 	low_beam_processing();
 	cornering_light_processing();
+	
+	/* stepper test code */
+	if (FALSE) {
+		stepper_motor_processing();
+	}
 }
+
+
