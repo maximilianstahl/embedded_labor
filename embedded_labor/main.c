@@ -15,6 +15,7 @@
 /* debounce time in milliseconds */
 #define DB_TIME_MS				50	
 
+// TODO evaluate speed
 /* stepper motor edge duration */
 #define EDGE_DUR_MS				10
 
@@ -83,19 +84,23 @@ volatile uint8_t btn_stat_reg = 0x00;	// register for button statuses
 volatile uint8_t lcd_stat_reg = 0x00;	// register to tell LCD what to display
 volatile uint8_t ctrl_reg = 0x00;		// register for general control exchange
 
+/* init functions */
 void timer_intr_init(void);
 void adc_init(void);
 uint8_t stepper_motor_calib(void);
 
+/* calculation and conversion functions */
 void read_adcs(uint8_t *steering_ang, uint8_t *velo_val);
 void steering_conversion(uint8_t *steering_ang);
 void velocity_conversion(uint8_t *velo_val);
 int16_t swivel_calc(void);
 uint8_t step(void);
 
+/* debounce functions */
 void turn_signal_button_debounce(void);
 void low_beam_button_debounce(void);
 
+/* processing functions */
 void turn_signal_processing(void);
 void low_beam_processing(void);
 void cornering_light_processing(void);
@@ -103,6 +108,7 @@ void stepper_motor_processing(int16_t swivel_angle);
 void steering_processing(void);
 
 // TODO: there is a better way + think about variable renaming, quite some steering steer ang angle
+/* global variables to exchange data between main and ISR */
 volatile uint8_t velo_value = 0;
 volatile int8_t steer_angle = 0;
 volatile uint8_t old_edge;
@@ -339,7 +345,7 @@ void turn_signal_processing(void)
 {
 	static TurnSignalState turn_sig_state = TS_IDLE;		// initial state is always idle
 	static uint16_t ctr = 0, comf_ctr = 0, desc_ctr = 0;
-	static uint8_t go_to_cont = FALSE, exit_cont = FALSE;
+	static uint8_t go_to_cont = FALSE, exit_cont = FALSE, allow_turn_off = FALSE;
 	
 	/* turn signal state machine */
 	switch (turn_sig_state) {
@@ -413,10 +419,24 @@ void turn_signal_processing(void)
 				ctr += 1;
 			}
 			
-			/* check if either button is pressed again or steering is done*/
+			/* check if either button is pressed again or steering is done */
 			if (BIT_IS_SET(btn_stat_reg, TS_BTN) || BIT_IS_SET(ctrl_reg, STEER_TS_OFF)) {
+				/* clear allow turn off and exit continues after next execution */
 				exit_cont = TRUE;
 			}
+			
+			// TODO why does this not work?
+			///* button has to be released in order to turn continuous mode off (so holding the button for longer than 3 s does not turn the turn signal off after releasing)*/
+			//if (!BIT_IS_SET(btn_stat_reg, TS_BTN)) {
+				//allow_turn_off = TRUE;
+			//}
+			//
+			///* check if either button is pressed again or steering is done */
+			//if (allow_turn_off && (BIT_IS_SET(btn_stat_reg, TS_BTN) || BIT_IS_SET(ctrl_reg, STEER_TS_OFF))) {
+				///* clear allow turn off and exit continues after next execution */
+				//exit_cont = TRUE;
+				//allow_turn_off = FALSE;
+			//}
 			break;
 		case TS_TURN_OFF:
 			CLEAR_BIT(ctrl_reg, STEER_TS_OFF);	// unset turn off turn signal
@@ -441,7 +461,7 @@ void low_beam_processing(void)
 {
 	static LowBeamState low_beam_state = LB_IDLE;		// initial state is always idle
 	static uint16_t ctr = 0, dim_val = 460;
-	static uint8_t dim_cycl = 0, exit_dim = FALSE;
+	static uint8_t dim_cycl = 0, allow_turn_off = FALSE;
 	
 	/* turn signal state machine */
 	switch (low_beam_state) {
@@ -477,27 +497,27 @@ void low_beam_processing(void)
 				dim_cycl = 0;
 			}
 			
-			/* once button is released, allow exit of dim state -> needed to prevent instant exit */
+			/* once button is released, allow turn off state -> needed to prevent instant exit */
 			if (!BIT_IS_SET(btn_stat_reg, LB_BTN)) {
-				exit_dim = TRUE;
+				allow_turn_off = TRUE;
 			}
 
 			/* check if button is pressed again, if so turn lb off */
-			if (exit_dim && BIT_IS_SET(btn_stat_reg, LB_BTN)) {
+			if (allow_turn_off && BIT_IS_SET(btn_stat_reg, LB_BTN)) {
 				low_beam_state = LB_TURN_OFF;
-				exit_dim = FALSE;
+				allow_turn_off = FALSE;
 			}
 			break;
 		case LB_ON:
-			/* once button is released, allow exit of dim state -> needed to prevent instant exit */
+			/* once button is released, allow turn off state -> needed to prevent instant exit */
 			if (!BIT_IS_SET(btn_stat_reg, LB_BTN)) {
-				exit_dim = TRUE;
+				allow_turn_off = TRUE;
 			}
 
 			/* check if button is pressed again, if so turn lb off */
-			if (exit_dim && BIT_IS_SET(btn_stat_reg, LB_BTN)) {
+			if (allow_turn_off && BIT_IS_SET(btn_stat_reg, LB_BTN)) {
 				low_beam_state = LB_TURN_OFF;
-				exit_dim = FALSE;
+				allow_turn_off = FALSE;
 			}
 			break;
 		case LB_TURN_OFF:
@@ -562,13 +582,13 @@ void cornering_light_processing(void)
 			}
 
 			/* check if cornering light should be turned off again */
-			if (!BIT_IS_SET(ctrl_reg, LOW_BEAM_ON) || (velo_value > 20) || ((steer_angle > -7) && !BIT_IS_SET(ctrl_reg, TS_ON))) {
+			if (!BIT_IS_SET(ctrl_reg, LOW_BEAM_ON) || (velo_value > 20) || ((steer_angle > -5) && !BIT_IS_SET(ctrl_reg, TS_ON))) {
 				corn_light_state = CL_TURN_OFF;
 			}
 			break;
 		case CL_ON:
 			/* check if cornering light should be turned off again */
-			if (!BIT_IS_SET(ctrl_reg, LOW_BEAM_ON) || (velo_value > 20) || ((steer_angle > -7) && !BIT_IS_SET(ctrl_reg, TS_ON))) {
+			if (!BIT_IS_SET(ctrl_reg, LOW_BEAM_ON) || (velo_value > 20) || ((steer_angle > -5) && !BIT_IS_SET(ctrl_reg, TS_ON))) {
 				corn_light_state = CL_TURN_OFF;
 			}
 			break;
@@ -604,49 +624,10 @@ void stepper_motor_processing(int16_t swivel_angle)
 			current_pos -= step();
 		}
 	}
-
+	
+	// TODO remove debug prints after stepper works
 	curr_pos = current_pos;
 	swivel = swivel_angle;
-	
-	//// TODO develop function and eval speed (with define)
-	//static uint16_t steps = 0;
-	//static uint8_t ctr = 0;
-	//static uint8_t back = FALSE;
-//
-	//if (steps < 100) {
-		//if (!back) {
-			//// apparently 1 kHz also works?
-			//if (ctr > 1) {
-				//PORTB ^= (1 << PB5);
-				//ctr = 0;
-				//steps += 1;
-			//}
-			//else {
-				//ctr += 1;
-			//}
-		//}
-		//else {
-			//if (ctr > 100) {
-				//PORTB ^= (1 << PB5);
-				//ctr = 0;
-				//steps += 1;
-			//}
-			//else {
-				//ctr += 1;
-			//}
-		//}
-	//}
-	//else {
-		//PORTC ^= (1 << PC0);
-		//steps = 0;
-		//
-		//if (back) {
-			//back = FALSE;
-		//}
-		//else {
-			//back = TRUE;
-		//}
-	//}
 }
 
 void turn_signal_button_debounce(void)
@@ -803,14 +784,13 @@ void velocity_conversion(uint8_t *velo_val)
 
 void steering_processing(void)
 {
-	// TODO steering processing only in the direction of the headlight would make sense
-	/* function to tell whether steering process is initiated, done or non exisiting */
-	static uint8_t steering_initiated = FALSE;	// var to tell if steering process is initiated
+	/* function to tell whether steering process to the left is initiated, done or non existing (only process left as we only control the left headlight) */
+	static uint8_t steering_initiated = FALSE;
 
 	/* steering processing */
 	if (!steering_initiated) {
-		if (!((-10 < steer_angle) && (steer_angle < 10))) {
-			/* steering process is initiated -> not -10° < lw < 10° */
+		if (!(-10 < steer_angle)) {
+			/* steering process is initiated -> not -10° < lw */
 			steering_initiated = TRUE;
 		}
 		else {
@@ -819,8 +799,8 @@ void steering_processing(void)
 		}
 	}
 	else {
-		if ((-7 < steer_angle) && (steer_angle < 7)) {
-			/* steering done -> -7° < lw < 7° (hysterical behavior) */
+		if (-5 < steer_angle) {
+			/* steering done -> -5° < lw (hysterical behavior) */
 			steering_initiated = FALSE;
 			/* set turn off turn signal bit */
 			SET_BIT(ctrl_reg, STEER_TS_OFF);
