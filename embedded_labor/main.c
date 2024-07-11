@@ -15,9 +15,8 @@
 /* debounce time in milliseconds */
 #define DB_TIME_MS				50	
 
-// TODO evaluate speed
 /* stepper motor edge duration */
-#define EDGE_DUR_MS				10
+#define EDGE_DUR_MS				20
 
 /* defines for button status register */
 #define TS_BTN					1
@@ -410,7 +409,7 @@ void turn_signal_processing(void)
 				ctr = 0;
 				
 				/* only allow exit after loop (button condition is required so loop does not instantly start again) */
-				if (exit_cont && !(BIT_IS_SET(btn_stat_reg, TS_BTN))) {
+				if (exit_cont) {
 					turn_sig_state = TS_TURN_OFF;
 					exit_cont = FALSE;
 				}
@@ -419,24 +418,17 @@ void turn_signal_processing(void)
 				ctr += 1;
 			}
 			
-			/* check if either button is pressed again or steering is done */
-			if (BIT_IS_SET(btn_stat_reg, TS_BTN) || BIT_IS_SET(ctrl_reg, STEER_TS_OFF)) {
-				/* clear allow turn off and exit continues after next execution */
-				exit_cont = TRUE;
+			/* button has to be released in order to turn continuous mode off (so holding the button for longer than 3 s does not turn the turn signal off after releasing) */
+			if (!BIT_IS_SET(btn_stat_reg, TS_BTN)) {
+				allow_turn_off = TRUE;
 			}
 			
-			// TODO why does this not work?
-			///* button has to be released in order to turn continuous mode off (so holding the button for longer than 3 s does not turn the turn signal off after releasing)*/
-			//if (!BIT_IS_SET(btn_stat_reg, TS_BTN)) {
-				//allow_turn_off = TRUE;
-			//}
-			//
-			///* check if either button is pressed again or steering is done */
-			//if (allow_turn_off && (BIT_IS_SET(btn_stat_reg, TS_BTN) || BIT_IS_SET(ctrl_reg, STEER_TS_OFF))) {
-				///* clear allow turn off and exit continues after next execution */
-				//exit_cont = TRUE;
-				//allow_turn_off = FALSE;
-			//}
+			/* check if either button is pressed again or steering is done + flag conditions are met */
+			if (allow_turn_off && !exit_cont && (BIT_IS_SET(btn_stat_reg, TS_BTN) || BIT_IS_SET(ctrl_reg, STEER_TS_OFF))) {
+				/* clear allow turn off and exit continues after next execution */
+				exit_cont = TRUE;
+				allow_turn_off = FALSE;
+			}
 			break;
 		case TS_TURN_OFF:
 			CLEAR_BIT(ctrl_reg, STEER_TS_OFF);	// unset turn off turn signal
@@ -611,23 +603,63 @@ void cornering_light_processing(void)
 
 void stepper_motor_processing(int16_t swivel_angle)
 {	
-	/* input is swivel angle with comma shifted, so 11.5 is 115 (to calc steps more precise) */
-	static int16_t current_pos = 0;
+	///* input is swivel angle with comma shifted, so 11.5 is 115 (to calc steps more precise) */
+	//static int16_t current_pos = 0;
+	//
+	//if (current_pos != swivel_angle) {
+		//if (current_pos < swivel_angle) {
+			//SET_STEP_DIR_R();
+			//current_pos += step();
+		//}
+		//else if (current_pos > swivel_angle) {
+			//SET_STEP_DIR_L();
+			//current_pos -= step();
+		//}
+	//}
+	//
+	//// TODO remove debug prints after stepper works
+	//curr_pos = current_pos;
+	//swivel = swivel_angle;
 	
-	if (current_pos != swivel_angle) {
-		if (current_pos < swivel_angle) {
-			SET_STEP_DIR_L();
-			current_pos += step();
+	// TODO develop function and eval speed (with define)
+	static uint16_t steps = 0;
+	static uint8_t ctr = 0;
+	static uint8_t back = FALSE;
+	
+	if (steps < 2 * 50) {
+		if (!back) {
+		// apparently 1 kHz also works?
+			if (ctr > 1) {
+				PORTB ^= (1 << PB5);
+				ctr = 0;
+				steps += 1;
+			}
+			else {
+				ctr += 1;
+			}
 		}
-		else if (current_pos > swivel_angle) {
-			SET_STEP_DIR_R();
-			current_pos -= step();
+		else {
+			if (ctr > 100) {
+				PORTB ^= (1 << PB5);
+				ctr = 0;
+				steps += 1;
+			}
+			else {
+				ctr += 1;
+			}
 		}
 	}
+	else {
+		PORTC ^= (1 << PC0);
+		steps = 0;
 	
-	// TODO remove debug prints after stepper works
-	curr_pos = current_pos;
-	swivel = swivel_angle;
+		if (back) {
+			back = FALSE;
+		}
+		else {
+			back = TRUE;
+		}
+	}
 }
 
 void turn_signal_button_debounce(void)
@@ -849,7 +881,7 @@ ISR (TIMER1_OVF_vect)
 	cornering_light_processing();
 
 	// if cond for developing
-	if (FALSE) {
+	if (TRUE) {
 		if (calib_done) {
 			stepper_motor_processing(swivel_calc());
 		}
