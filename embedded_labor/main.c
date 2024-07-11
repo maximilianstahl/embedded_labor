@@ -106,14 +106,11 @@ void cornering_light_processing(void);
 void stepper_motor_processing(int16_t swivel_angle);
 void steering_processing(void);
 
-// TODO: there is a better way + think about variable renaming, quite some steering steer ang angle
+// TODO: think about variable renaming, quite some steering steer ang angle
 /* global variables to exchange data between main and ISR */
 volatile uint8_t velo_value = 0;
 volatile int8_t steer_angle = 0;
 volatile uint8_t old_edge;
-
-volatile int16_t curr_pos = 0;
-volatile int16_t swivel = 0;
 
 int main(void)
 {
@@ -179,13 +176,6 @@ int main(void)
 		lcd_text(lcd_str);					// put value to LCD
 		lcd_set_cursor(0, 9);				// write to the first column of the second row
 		lcd_write(DEG_SYM);					// display degree symbol
-		
-		/* debug print for current headlight position */
-		//lcd_set_cursor(0, 5);				// write to the first column of the second row
-		//lcd_text("CP: ");					// put value to LCD
-		//int16t2ascii(curr_pos, lcd_str);	// convert int to ascii representation
-		//lcd_set_cursor(0, 9);				// write to the first column of the second row
-		//lcd_text(lcd_str);					// put value to LCD
 
 		/* low beam symbol print */
 		if (BIT_IS_SET(lcd_stat_reg, LOW_BEAM)) {
@@ -213,13 +203,6 @@ int main(void)
 		lcd_text(lcd_str);					// put value to LCD
 		lcd_set_cursor(1, 10);				// write to the first column of the second row
 		lcd_text("km/h");					// put value to LCD
-		
-		/* debug print for current swivel */
-		//lcd_set_cursor(1, 5);				// write to the first column of the second row
-		//lcd_text("SW: ");					// put value to LCD
-		//int16t2ascii(swivel, lcd_str);		// convert int to ascii representation
-		//lcd_set_cursor(1, 9);				// write to the first column of the second row
-		//lcd_text(lcd_str);
 				
 		_delay_ms(100);
 	}
@@ -344,7 +327,7 @@ void turn_signal_processing(void)
 {
 	static TurnSignalState turn_sig_state = TS_IDLE;		// initial state is always idle
 	static uint16_t ctr = 0, comf_ctr = 0, desc_ctr = 0;
-	static uint8_t go_to_cont = FALSE, exit_cont = FALSE, allow_turn_off = FALSE;
+	static uint8_t go_to_cont = FALSE, exit_after_flash = FALSE, allow_turn_off = FALSE;
 	
 	/* turn signal state machine */
 	switch (turn_sig_state) {
@@ -377,12 +360,30 @@ void turn_signal_processing(void)
 					comf_ctr += 1;
 					ctr = 0;
 					
-					/* toggle turn signal and status register */
-					TOGGLE_BIT(PORTB, PB4);
-					TOGGLE_BIT(lcd_stat_reg, TURN_SIG);
+					/* only allow exit after loop */
+					if (exit_after_flash) {
+						turn_sig_state = TS_TURN_OFF;
+			
+					}
+					else {
+						/* toggle turn signal and status register */
+						TOGGLE_BIT(PORTB, PB4);
+						TOGGLE_BIT(lcd_stat_reg, TURN_SIG);
+					}
 				}
 				else {
 					ctr += 1;
+				}
+				
+				/* button has to be released in order to turn continuous mode off (so holding the button for longer than 3 s does not turn the turn signal off after releasing) */
+				if (!BIT_IS_SET(btn_stat_reg, TS_BTN)) {
+					allow_turn_off = TRUE;
+				}
+							
+				/* check if either button is pressed again or steering is done + flag conditions are met */
+				if (allow_turn_off && !exit_after_flash && BIT_IS_SET(btn_stat_reg, TS_BTN)) {
+					/* clear allow turn off and exit continues after next execution */
+					exit_after_flash = TRUE;
 				}
 			}
 			else {
@@ -390,29 +391,26 @@ void turn_signal_processing(void)
 				if (go_to_cont) {
 					turn_sig_state = TS_CONT;
 					go_to_cont = FALSE;
+					ctr = 0;
 				}
 				else {
-					turn_sig_state = TS_IDLE;
+					turn_sig_state = TS_TURN_OFF;
 				}
-			
-				/* comfort mode done -> reset all counters */
-				desc_ctr = 0;
-				comf_ctr = 0;
-				ctr = 0;
 			}
 			break;
 		case TS_CONT:
 			if (ctr > 500) {
-				/* toggle turn signal and status register */
-				TOGGLE_BIT(PORTB, PB4);
-				TOGGLE_BIT(lcd_stat_reg, TURN_SIG);
 				ctr = 0;
 				
-				/* only allow exit after loop (button condition is required so loop does not instantly start again) */
-				if (exit_cont) {
+				/* only allow exit after loop */
+				if (exit_after_flash) {
 					turn_sig_state = TS_TURN_OFF;
-					exit_cont = FALSE;
 				}
+				else {
+					/* toggle turn signal and status registe */
+					TOGGLE_BIT(PORTB, PB4);
+					TOGGLE_BIT(lcd_stat_reg, TURN_SIG);
+				}	
 			}
 			else {	
 				ctr += 1;
@@ -424,20 +422,31 @@ void turn_signal_processing(void)
 			}
 			
 			/* check if either button is pressed again or steering is done + flag conditions are met */
-			if (allow_turn_off && !exit_cont && (BIT_IS_SET(btn_stat_reg, TS_BTN) || BIT_IS_SET(ctrl_reg, STEER_TS_OFF))) {
+			if (allow_turn_off && !exit_after_flash && (BIT_IS_SET(btn_stat_reg, TS_BTN) || BIT_IS_SET(ctrl_reg, STEER_TS_OFF))) {
 				/* clear allow turn off and exit continues after next execution */
-				exit_cont = TRUE;
-				allow_turn_off = FALSE;
+				exit_after_flash = TRUE;
 			}
 			break;
 		case TS_TURN_OFF:
-			CLEAR_BIT(ctrl_reg, STEER_TS_OFF);	// unset turn off turn signal
-			/* unset control reg to let steering light know */
+			/* clear turn off turn signal in control register */
+			CLEAR_BIT(ctrl_reg, STEER_TS_OFF);
+			/* clear control reg to let steering light know */
 			CLEAR_BIT(ctrl_reg, TS_ON);		
+			
 			/* manually turn off turn signal (active low) and clear lcd bit */
 			SET_BIT(PORTB, PB4);
 			CLEAR_BIT(lcd_stat_reg, TURN_SIG);
-
+			
+			/* make sure all counters are reset */
+			desc_ctr = 0;
+			comf_ctr = 0;
+			ctr = 0;
+			
+			/* make sure all flags are reset */
+			exit_after_flash = FALSE;
+			allow_turn_off = FALSE;
+			
+			/* finally go back to idle after button is released (so loop does not instantly start again) */
 			if (!BIT_IS_SET(btn_stat_reg, TS_BTN)) {	
 				turn_sig_state = TS_IDLE;
 			}
@@ -497,7 +506,6 @@ void low_beam_processing(void)
 			/* check if button is pressed again, if so turn lb off */
 			if (allow_turn_off && BIT_IS_SET(btn_stat_reg, LB_BTN)) {
 				low_beam_state = LB_TURN_OFF;
-				allow_turn_off = FALSE;
 			}
 			break;
 		case LB_ON:
@@ -509,20 +517,23 @@ void low_beam_processing(void)
 			/* check if button is pressed again, if so turn lb off */
 			if (allow_turn_off && BIT_IS_SET(btn_stat_reg, LB_BTN)) {
 				low_beam_state = LB_TURN_OFF;
-				allow_turn_off = FALSE;
 			}
 			break;
-		case LB_TURN_OFF:
-			/* manually turn off led (active low) */
+		case LB_TURN_OFF:	
+			/* clear lcd bit */
+			CLEAR_BIT(lcd_stat_reg, LOW_BEAM);
+			/* clear control reg bit */
+			CLEAR_BIT(ctrl_reg, LOW_BEAM_ON);
+			
+			/* manually turn off led (active low) and reset dimming cycle counter */
 			OCR1B = dim_val;
 			dim_val = 460;
 			dim_cycl = 0;
-
-			CLEAR_BIT(lcd_stat_reg, LOW_BEAM);
-			/* unset control reg to let steering light know */
-			CLEAR_BIT(ctrl_reg, LOW_BEAM_ON);
-
-			/* button condition is required so loop does not instantly start again) */
+			
+			/* make sure turn off flag reset */
+			allow_turn_off = FALSE;
+			
+			/* finally go back to idle after button is released (so loop does not instantly start again) */
 			if (!BIT_IS_SET(btn_stat_reg, LB_BTN)) {
 				low_beam_state = LB_IDLE;
 			}
@@ -585,13 +596,15 @@ void cornering_light_processing(void)
 			}
 			break;
 		case CL_TURN_OFF:
-			/* manually turn off led (active low) */
+			/* manually turn off led (active low) and reset dimming cycle counter */
 			dim_val = 255;
 			OCR2 = dim_val;
 			dim_cycl = 0;
-
+			
+			/* clear lcd bit */
 			CLEAR_BIT(lcd_stat_reg, CORNERING);
 
+			/* finally go back to idle */
 			corn_light_state = CL_IDLE;
 			break;
 		default:
@@ -603,61 +616,17 @@ void cornering_light_processing(void)
 
 void stepper_motor_processing(int16_t swivel_angle)
 {	
-	///* input is swivel angle with comma shifted, so 11.5 is 115 (to calc steps more precise) */
-	//static int16_t current_pos = 0;
-	//
-	//if (current_pos != swivel_angle) {
-		//if (current_pos < swivel_angle) {
-			//SET_STEP_DIR_R();
-			//current_pos += step();
-		//}
-		//else if (current_pos > swivel_angle) {
-			//SET_STEP_DIR_L();
-			//current_pos -= step();
-		//}
-	//}
-	//
-	//// TODO remove debug prints after stepper works
-	//curr_pos = current_pos;
-	//swivel = swivel_angle;
+	/* input is swivel angle with comma shifted, so 11.5 is 115 (to calc steps more precise) */
+	static int16_t current_pos = 0;
 	
-	// TODO develop function and eval speed (with define)
-	static uint16_t steps = 0;
-	static uint8_t ctr = 0;
-	static uint8_t back = FALSE;
-	
-	if (steps < 2 * 50) {
-		if (!back) {
-		// apparently 1 kHz also works?
-			if (ctr > 1) {
-				PORTB ^= (1 << PB5);
-				ctr = 0;
-				steps += 1;
-			}
-			else {
-				ctr += 1;
-			}
+	if (current_pos != swivel_angle) {
+		if (current_pos < swivel_angle) {
+			SET_STEP_DIR_R();
+			current_pos += step();
 		}
-		else {
-			if (ctr > 100) {
-				PORTB ^= (1 << PB5);
-				ctr = 0;
-				steps += 1;
-			}
-			else {
-				ctr += 1;
-			}
-		}
-	}
-	else {
-		PORTC ^= (1 << PC0);
-		steps = 0;
-	
-		if (back) {
-			back = FALSE;
-		}
-		else {
-			back = TRUE;
+		else if (current_pos > swivel_angle) {
+			SET_STEP_DIR_L();
+			current_pos -= step();
 		}
 	}
 }
@@ -847,7 +816,7 @@ int16_t swivel_calc(void)
 	
 	/* swivel calc only between 30 and 120 kmh, else stays */
 	if ((velo_value >= 30) && (velo_value <= 120)) {
-		swivel = (steer_angle * 10 * (90 - (velo_value - 30))) / 90;
+		swivel = steer_angle * 10;
 
 		/* check if swivel angle is greater than +-15 (= max swivel)*/
 		if (swivel > 150) {
@@ -861,6 +830,9 @@ int16_t swivel_calc(void)
 		if (swivel >= 0) {
 			swivel /= 2;
 		}
+		
+		/* finally make swivel linear to velocity */
+		swivel = (swivel * (90 - (velo_value - 30))) / 90;
 	}
 	
 	return swivel;
@@ -880,14 +852,11 @@ ISR (TIMER1_OVF_vect)
 	low_beam_processing();
 	cornering_light_processing();
 
-	// if cond for developing
-	if (TRUE) {
-		if (calib_done) {
-			stepper_motor_processing(swivel_calc());
-		}
-		else {
-			calib_done = stepper_motor_calib();
-		}
-	} 
+	if (calib_done) {
+		stepper_motor_processing(swivel_calc());
+	}
+	else {
+		calib_done = stepper_motor_calib();
+	}
 }
 
