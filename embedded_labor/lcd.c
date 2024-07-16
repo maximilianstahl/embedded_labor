@@ -23,7 +23,7 @@ uint8_t deg_sym[8] = {
 	0b00000,
 	0b00000
 };
-/* turn signal left off symbol*/
+/* turn signal left off symbol */
 uint8_t ts_off_l_sym[8] = {	
 	0b00010,
 	0b00101,
@@ -34,7 +34,7 @@ uint8_t ts_off_l_sym[8] = {
 	0b00010,
 	0b00000
 };
-/* turn signal right off symbol*/
+/* turn signal right off symbol */
 uint8_t ts_off_r_sym[8] = {
 	0b01000,
 	0b10100,
@@ -45,7 +45,7 @@ uint8_t ts_off_r_sym[8] = {
 	0b01000,
 	0b00000,
 };
-/* turn signal left on symbol*/
+/* turn signal left on symbol */
 uint8_t ts_on_l_sym[8] = {
 	0b00010,
 	0b00111,
@@ -56,7 +56,7 @@ uint8_t ts_on_l_sym[8] = {
 	0b00010,
 	0b00000
 };
-/* low beam off symbol*/
+/* low beam off symbol */
 uint8_t lb_off_sym[8] = {
 	0b00000,
 	0b00000,
@@ -67,7 +67,7 @@ uint8_t lb_off_sym[8] = {
 	0b01110,
 	0b01110
 };
-/* low beam on symbol*/
+/* low beam on symbol */
 uint8_t lb_on_sym[8] = {
 	0b00000,
 	0b10101,
@@ -78,7 +78,7 @@ uint8_t lb_on_sym[8] = {
 	0b01110,
 	0b01110
 };
-/* cornering light off symbol*/
+/* cornering light off symbol */
 uint8_t cl_off_sym[8] = {
 	0b00000,
 	0b00000,
@@ -89,7 +89,7 @@ uint8_t cl_off_sym[8] = {
 	0b01110,
 	0b01110
 };
-/* cornering light on symbol*/
+/* cornering light on symbol */
 uint8_t cl_on_sym[8] = {
 	0b01001,
 	0b10010,

@@ -10,6 +10,7 @@
 #ifndef LCD_H_
 #define LCD_H_
 
+/* defines for custom symbol locations */
 #define DEG_SYM			0x00
 #define TS_OFF_L_SYM	0x01
 #define TS_OFF_R_SYM	0x02

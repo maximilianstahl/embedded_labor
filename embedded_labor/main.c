@@ -106,7 +106,6 @@ void cornering_light_processing(void);
 void stepper_motor_processing(int16_t swivel_angle);
 void steering_processing(void);
 
-// TODO: think about variable renaming, quite some steering steer ang angle
 /* global variables to exchange data between main and ISR */
 volatile uint8_t velo_value = 0;
 volatile int8_t steer_angle = 0;
@@ -114,7 +113,7 @@ volatile uint8_t old_edge;
 
 int main(void)
 {
-	uint8_t steer_ang = 0, velo_val = 0;		// define vars for steering and velocity adc values
+	uint8_t steer_adc_val = 0, velo_adc_val = 0;		// define vars for steering and velocity adc values
 	char lcd_str[17];
 
 	DDRD |= 0xFC;					// set bits 2...7 as outputs
@@ -144,11 +143,11 @@ int main(void)
 	while (TRUE)
 	{
 		/* read adc values and process these values */
-		read_adcs(&steer_ang, &velo_val);
+		read_adcs(&steer_adc_val, &velo_adc_val);
 		
 		/* convert adc values into corresponding steering angle and velocity value */
-		steering_conversion(&steer_ang);
-		velocity_conversion(&velo_val);
+		steering_conversion(&steer_adc_val);
+		velocity_conversion(&velo_adc_val);
 		
 		/* process steering */
 		steering_processing();
@@ -204,7 +203,7 @@ int main(void)
 		lcd_set_cursor(1, 10);				// write to the first column of the second row
 		lcd_text("km/h");					// put value to LCD
 				
-		_delay_ms(100);
+		_delay_ms(50);
 	}
 }
 
@@ -298,18 +297,18 @@ uint8_t stepper_motor_calib(void)
 	return calib_done;
 }
 
-void read_adcs(uint8_t *steering_ang, uint8_t *velo_val)
+void read_adcs(uint8_t *steer_adc_val, uint8_t *velo_adc_val)
 {
 	static uint8_t curr_adc_ch = STEER_ADC_CH;
 	
 	/* read value and change channel if conversion is finished */
 	if (!BIT_IS_SET(ADCSRA, ADSC)) {
 		if (curr_adc_ch == STEER_ADC_CH) {
-			*steering_ang = ADCH;
+			*steer_adc_val = ADCH;
 			curr_adc_ch = VELO_ADC_CH;
 		}
 		else if (curr_adc_ch == VELO_ADC_CH) {
-			*velo_val = ADCH;
+			*velo_adc_val = ADCH;
 			curr_adc_ch = STEER_ADC_CH;
 		}
 		else {
@@ -407,7 +406,7 @@ void turn_signal_processing(void)
 					turn_sig_state = TS_TURN_OFF;
 				}
 				else {
-					/* toggle turn signal and status registe */
+					/* toggle turn signal and status register */
 					TOGGLE_BIT(PORTB, PB4);
 					TOGGLE_BIT(lcd_stat_reg, TURN_SIG);
 				}	
@@ -761,24 +760,26 @@ void low_beam_button_debounce(void)
 	}
 }
 
-void steering_conversion(uint8_t *steer_ang)
+void steering_conversion(uint8_t *steer_adc_val)
 {
 	/* transform potentiometer value into linear steering characteristics */
-	if (*steer_ang < 255) {
-		steer_angle = (*steer_ang * 60) / 255 - 30;
+	if (*steer_adc_val < 255) {
+		steer_angle = (*steer_adc_val * 60) / 255 - 30;
 	}
 	else {
+		/* max poti value means max steering angle to the right */
 		steer_angle = 30;
 	}
 }
 
-void velocity_conversion(uint8_t *velo_val)
+void velocity_conversion(uint8_t *velo_adc_val)
 {
 	/* transform potentiometer value into linear velocity characteristics */
-	if (*velo_val < 255) {
-		velo_value = (*velo_val * 130) / 255  ;
+	if (*velo_adc_val < 255) {
+		velo_value = (*velo_adc_val * 130) / 255  ;
 	}
 	else {
+		/* max poti value means max velocity value */
 		velo_value = 130;
 	}
 }
